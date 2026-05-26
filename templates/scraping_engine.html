@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Scraping Engine{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>Scraping Engine</h1>
+      <p class="muted">
+        Source: Companies sheet · column <strong>EVENT SOURCE</strong> (first 50 unique URLs).
+        Parsed into structured exhibitor profiles, then enriched with Icypeas
+        people search by company name.
+      </p>
+    </div>
+    <form method="post" action="{{ url_for('scraping_engine_scrape') }}">
+      <button class="btn btn-primary" type="submit">
+        {{ 'Re-scrape exhibitors' if data else 'Scrape exhibitors' }}
+      </button>
+    </form>
+  </div>
+
+  <ul class="sources">
+    {% for url in event_sources %}
+      <li><code>{{ url }}</code></li>
+    {% endfor %}
+  </ul>
+
+  {% if not icypeas_ready %}
+    <div class="flash flash-warn">
+      Icypeas enrichment is disabled — set the <code>ICYPEAS_API_KEY</code> config var to enable it.
+    </div>
+  {% endif %}
+</section>
+
+{% if data %}
+  <section class="panel">
+    <div class="stats">
+      <div class="stat"><span class="num">{{ data.count }}</span><span class="lbl">exhibitors</span></div>
+      <div class="stat"><span class="num">{{ data.categories|length }}</span><span class="lbl">categories</span></div>
+      <div class="stat"><span class="num">{{ data.sources|length }}</span><span class="lbl">source URLs</span></div>
+      <div class="stat"><span class="lbl">scraped</span><span class="when">{{ data.scraped_at }}</span></div>
+    </div>
+
+    {% if data.categories %}
+      <div class="chips">
+        {% for cat, n in data.categories.items() %}
+          <span class="chip">{{ cat }} <b>{{ n }}</b></span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="cards">
+    {% for ex in data.exhibitors %}
+      {% set key = ex.name.replace(' ', '-') %}
+      {% set enr = enrichment.get(ex.name) %}
+      <article class="card" id="company-{{ key }}">
+        <div class="card-top">
+          {% if ex.logo_url %}<img class="logo" src="{{ ex.logo_url }}" alt="" loading="lazy">{% endif %}
+          <div class="card-title">
+            <h3>{{ ex.name }}</h3>
+            {% if ex.tagline %}<p class="tagline">{{ ex.tagline }}</p>{% endif %}
+            <div class="meta">
+              {% if ex.stand %}<span class="pill">Stand {{ ex.stand }}</span>{% endif %}
+              {% for c in ex.categories %}<span class="pill pill-cat">{{ c }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        {% if ex.description %}
+          <details class="desc">
+            <summary>Profile</summary>
+            <p>{{ ex.description }}</p>
+          </details>
+        {% endif %}
+
+        <div class="enrich">
+          <form method="post" action="{{ url_for('scraping_engine_enrich') }}">
+            <input type="hidden" name="company" value="{{ ex.name }}">
+            <button class="btn btn-small" type="submit" {{ 'disabled' if not icypeas_ready }}>
+              {{ 'Re-run Icypeas' if enr else 'Find people (Icypeas)' }}
+            </button>
+          </form>
+
+          {% if enr %}
+            {% if enr.ok %}
+              <div class="enr-result">
+                <span class="muted">{{ enr.count }} contact(s) · {{ enr.enriched_at }}</span>
+                {% if enr.leads %}
+                  <table class="leads">
+                    <thead><tr><th>Name</th><th>Title</th><th>Location</th><th>LinkedIn</th></tr></thead>
+                    <tbody>
+                    {% for ld in enr.leads %}
+                      <tr>
+                        <td>{{ (ld.firstname ~ ' ' ~ ld.lastname)|trim or ld.get('name','') }}</td>
+                        <td>{{ ld.get('lastJobTitle') or ld.get('headline') or '' }}</td>
+                        <td>{{ ld.get('address') or ld.get('location') or '' }}</td>
+                        <td>{% if ld.get('profileUrl') %}<a href="{{ ld.profileUrl }}" target="_blank" rel="noopener">profile</a>{% endif %}</td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="enr-error">Icypeas: {{ enr.error }}</div>
+            {% endif %}
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <section class="panel empty">
+    <p>No exhibitors scraped yet. Click <strong>Scrape exhibitors</strong> to fetch the EVENT SOURCE list.</p>
+  </section>
+{% endif %}
+
+{% endblock %}

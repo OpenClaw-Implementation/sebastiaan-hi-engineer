@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Content Engine{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>Content Engine</h1>
+      <p class="muted">
+        Source: Sources sheet · <strong>Media</strong> block. Each industrial/food
+        portal is fetched with a direct request and its content rendered for viewing.
+      </p>
+    </div>
+    <form method="post" action="{{ url_for('content_engine_scrape') }}">
+      <button class="btn btn-primary" type="submit">Scrape all sources</button>
+    </form>
+  </div>
+</section>
+
+{% for url in sources %}
+  {% set item = media.get(url) %}
+  <section class="panel source" id="src-{{ loop.index }}">
+    <div class="panel-head">
+      <div>
+        <h2>{{ item.title if item and item.ok and item.title else url }}</h2>
+        <p class="muted"><code>{{ url }}</code></p>
+      </div>
+      <form method="post" action="{{ url_for('content_engine_scrape') }}">
+        <input type="hidden" name="url" value="{{ url }}">
+        <button class="btn btn-small" type="submit">{{ 'Re-scrape' if item else 'Scrape' }}</button>
+      </form>
+    </div>
+
+    {% if item %}
+      {% if item.ok %}
+        {% if item.description %}<p class="src-desc">{{ item.description }}</p>{% endif %}
+        <div class="muted small">
+          {{ item.listing_count }} listing(s) detected · scraped {{ item.scraped_at }}
+        </div>
+
+        {% if item.note %}<div class="flash flash-warn small">{{ item.note }}</div>{% endif %}
+
+        {% if item.listings %}
+          <details open class="block">
+            <summary>Detected company / listing entries ({{ item.listing_count }})</summary>
+            <ul class="listings">
+              {% for l in item.listings %}
+                <li>{% if l.url %}<a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.name }}</a>{% else %}{{ l.name }}{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </details>
+        {% endif %}
+
+        <details class="block">
+          <summary>Page content (text){{ ' — truncated' if item.text_truncated }}</summary>
+          <pre class="content-text">{{ item.text }}</pre>
+        </details>
+      {% else %}
+        <div class="enr-error">Failed: {{ item.error }}</div>
+      {% endif %}
+    {% else %}
+      <p class="muted small">Not scraped yet.</p>
+    {% endif %}
+  </section>
+{% endfor %}
+
+{% endblock %}

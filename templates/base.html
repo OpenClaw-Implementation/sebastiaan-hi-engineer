@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hi-Engineer · {% block title %}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">hi&#8209;engineer<span class="brand-dot">.</span></div>
+    <nav class="tabs">
+      <a class="tab {{ 'active' if active == 'scraping' }}" href="{{ url_for('scraping_engine') }}">Scraping Engine</a>
+      <a class="tab {{ 'active' if active == 'content' }}" href="{{ url_for('content_engine') }}">Content Engine</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    Direct cURL scraping · no Firecrawl · no Apify · data from EPCM Guide (Netherlands)
+  </footer>
+</body>
+</html>
