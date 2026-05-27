@@ -117,6 +117,12 @@ def scraping_engine_enrich():
         flash("No company name supplied.", "error")
         return redirect(url_for("scraping_engine"))
 
+    # A missing key is a server-config issue, not a per-company result -- flash it
+    # and bail so it never gets persisted into the enrichment cache.
+    if not icypeas.has_api_key():
+        flash("Icypeas enrichment is disabled — ICYPEAS_API_KEY is not set on the server.", "error")
+        return redirect(url_for("scraping_engine"))
+
     run_id = db.create_run("enrich", f"Find people · {company}")
     log = RunLogger(run_id)
     result = icypeas.find_people(company, logger=log)
