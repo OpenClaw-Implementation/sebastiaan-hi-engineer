@@ -131,7 +131,9 @@ def _visible_text(soup: BeautifulSoup) -> str:
 def scrape_media(url: str) -> dict:
     """Fetch one Media source URL and return structured, viewable content."""
     try:
-        html = fetch_html(url)
+        # Shorter timeout than the default so one slow portal can't blow the
+        # request budget when scraping sources one after another.
+        html = fetch_html(url, timeout=12)
     except Exception as exc:  # noqa: BLE001
         return {"url": url, "ok": False, "error": str(exc)}
 

@@ -11,11 +11,44 @@
         portal is fetched with a direct request and its content rendered for viewing.
       </p>
     </div>
-    <form method="post" action="{{ url_for('content_engine_scrape') }}">
-      <button class="btn btn-primary" type="submit">Scrape all sources</button>
-    </form>
+    <div class="scrape-all-wrap">
+      <button class="btn btn-primary" id="scrape-all" type="button">Scrape all sources</button>
+      <span id="scrape-progress" class="muted small"></span>
+      <noscript>
+        <form method="post" action="{{ url_for('content_engine_scrape') }}" style="display:inline">
+          <button class="btn btn-primary" type="submit">Scrape all (no-JS)</button>
+        </form>
+      </noscript>
+    </div>
   </div>
 </section>
+
+<script>
+  // Scrape sources one at a time (each request stays well under Heroku's 30s
+  // router timeout); results persist to Supabase incrementally, then reload.
+  const SOURCES = {{ sources|tojson }};
+  const ENDPOINT = "{{ url_for('content_engine_scrape') }}?format=json";
+  const btn = document.getElementById("scrape-all");
+  const prog = document.getElementById("scrape-progress");
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    let ok = 0;
+    for (let i = 0; i < SOURCES.length; i++) {
+      prog.textContent = `Scraping ${i + 1} / ${SOURCES.length}…`;
+      try {
+        const res = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ url: SOURCES[i] }),
+        });
+        const data = await res.json();
+        if (data.ok) ok++;
+      } catch (e) { /* keep going */ }
+    }
+    prog.textContent = `Done — ${ok}/${SOURCES.length} scraped. Reloading…`;
+    location.reload();
+  });
+</script>
 
 {% for url in sources %}
   {% set item = media.get(url) %}

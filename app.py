@@ -137,12 +137,23 @@ def content_engine_scrape():
         return redirect(url_for("content_engine"))
 
     store = _load(KEY_MEDIA, {})
-    to_scrape = [url] if url else targets  # blank = scrape all
+    to_scrape = [url] if url else targets  # blank = scrape all (no-JS fallback)
     for target in to_scrape:
         result = scrape_media(target)
         result["scraped_at"] = _now()
         store[target] = result
-    _save(KEY_MEDIA, store)
+        _save(KEY_MEDIA, store)  # incremental: survives a router timeout
+
+    # JSON mode (used by the client-side "Scrape all" loop) -- no flash/redirect.
+    if request.args.get("format") == "json":
+        r = store.get(url, {}) if url else {}
+        return {
+            "ok": r.get("ok", True),
+            "url": url,
+            "title": r.get("title", ""),
+            "listing_count": r.get("listing_count", 0),
+            "error": r.get("error"),
+        }
 
     if url:
         r = store[url]
