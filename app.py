@@ -37,6 +37,11 @@ EXHIBITORS_FILE = DATA_DIR / "exhibitors.json"
 ENRICHMENT_FILE = DATA_DIR / "enrichment.json"
 MEDIA_FILE = DATA_DIR / "media.json"
 
+# Optional fixed label shown for the "scraped" date instead of the live scrape
+# time (e.g. the canonical data date). Set the SCRAPED_AT_DISPLAY config var to
+# override; leave it unset to show the actual scrape timestamp.
+SCRAPED_AT_DISPLAY = os.environ.get("SCRAPED_AT_DISPLAY")
+
 
 # --------------------------------------------------------------------------- #
 # Tiny JSON store helpers
@@ -70,6 +75,8 @@ def index():
 @app.route("/scraping-engine")
 def scraping_engine():
     data = _load(EXHIBITORS_FILE, None)
+    if data and SCRAPED_AT_DISPLAY:
+        data["scraped_at"] = SCRAPED_AT_DISPLAY
     enrichment = _load(ENRICHMENT_FILE, {})
     return render_template(
         "scraping_engine.html",
