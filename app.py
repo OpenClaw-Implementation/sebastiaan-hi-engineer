@@ -9,19 +9,18 @@ Two tabs:
                         the content for viewing.
 
 All scraping uses direct cURL-style requests (no Firecrawl/Apify). Results are
-cached as JSON in DATA_DIR so a tab renders instantly after a scrape (Heroku's
-filesystem is ephemeral, so this cache resets when the dyno restarts).
+persisted via ``db`` -- Supabase Postgres when DATABASE_URL is set (durable
+across dyno restarts), falling back to local JSON files otherwise.
 """
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
+import db
 from scrapers import icypeas
 from scrapers.exhibitors import scrape_event_sources
 from scrapers.media import scrape_media
@@ -30,12 +29,12 @@ from scrapers.sources import EVENT_SOURCES, MEDIA_SOURCES, dedupe_keep_order
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "hi-engineer-dev-secret")
 
-DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+db.init_db()
 
-EXHIBITORS_FILE = DATA_DIR / "exhibitors.json"
-ENRICHMENT_FILE = DATA_DIR / "enrichment.json"
-MEDIA_FILE = DATA_DIR / "media.json"
+# Cache keys in the app_cache table (or <key>.json in the file fallback).
+KEY_EXHIBITORS = "exhibitors"
+KEY_ENRICHMENT = "enrichment"
+KEY_MEDIA = "media"
 
 # Optional fixed label shown for the "scraped" date instead of the live scrape
 # time (e.g. the canonical data date). Set the SCRAPED_AT_DISPLAY config var to
@@ -44,20 +43,15 @@ SCRAPED_AT_DISPLAY = os.environ.get("SCRAPED_AT_DISPLAY")
 
 
 # --------------------------------------------------------------------------- #
-# Tiny JSON store helpers
+# Store helpers (delegate to db: Supabase Postgres or file fallback)
 # --------------------------------------------------------------------------- #
-def _load(path: Path, default):
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except (ValueError, OSError):
-            return default
-    return default
+def _load(key: str, default):
+    value = db.cache_get(key)
+    return value if value is not None else default
 
 
-def _save(path: Path, data) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+def _save(key: str, data) -> None:
+    db.cache_set(key, data)
 
 
 def _now() -> str:
@@ -74,10 +68,10 @@ def index():
 
 @app.route("/scraping-engine")
 def scraping_engine():
-    data = _load(EXHIBITORS_FILE, None)
+    data = _load(KEY_EXHIBITORS, None)
     if data and SCRAPED_AT_DISPLAY:
         data["scraped_at"] = SCRAPED_AT_DISPLAY
-    enrichment = _load(ENRICHMENT_FILE, {})
+    enrichment = _load(KEY_ENRICHMENT, {})
     return render_template(
         "scraping_engine.html",
         active="scraping",
@@ -92,7 +86,7 @@ def scraping_engine():
 def scraping_engine_scrape():
     result = scrape_event_sources()
     result["scraped_at"] = _now()
-    _save(EXHIBITORS_FILE, result)
+    _save(KEY_EXHIBITORS, result)
     ok = sum(1 for s in result["sources"] if s["status"] == "ok")
     flash(
         f"Scraped {result['count']} unique exhibitors from {ok}/{len(result['sources'])} "
@@ -111,9 +105,9 @@ def scraping_engine_enrich():
 
     result = icypeas.find_people(company)
     result["enriched_at"] = _now()
-    store = _load(ENRICHMENT_FILE, {})
+    store = _load(KEY_ENRICHMENT, {})
     store[company] = result
-    _save(ENRICHMENT_FILE, store)
+    _save(KEY_ENRICHMENT, store)
 
     if result["ok"]:
         flash(f"Icypeas: found {result['count']} contact(s) for '{company}'.", "success")
@@ -124,7 +118,7 @@ def scraping_engine_enrich():
 
 @app.route("/content-engine")
 def content_engine():
-    media = _load(MEDIA_FILE, {})
+    media = _load(KEY_MEDIA, {})
     sources = dedupe_keep_order(MEDIA_SOURCES)
     return render_template(
         "content_engine.html",
@@ -142,13 +136,13 @@ def content_engine_scrape():
         flash("Unknown source URL.", "error")
         return redirect(url_for("content_engine"))
 
-    store = _load(MEDIA_FILE, {})
+    store = _load(KEY_MEDIA, {})
     to_scrape = [url] if url else targets  # blank = scrape all
     for target in to_scrape:
         result = scrape_media(target)
         result["scraped_at"] = _now()
         store[target] = result
-    _save(MEDIA_FILE, store)
+    _save(KEY_MEDIA, store)
 
     if url:
         r = store[url]
