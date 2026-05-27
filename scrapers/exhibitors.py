@@ -8,10 +8,12 @@ and parses every ``data-component="card-introduce"`` block with BeautifulSoup.
 from __future__ import annotations
 
 import re
+from time import perf_counter
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from runlog import NULL
 from .fetcher import fetch_html
 from .sources import EVENT_SOURCES, dedupe_keep_order
 
@@ -85,13 +87,15 @@ def parse_exhibitors_html(html: str, base_url: str) -> list[dict]:
     return exhibitors
 
 
-def scrape_event_sources(urls: list[str] | None = None) -> dict:
+def scrape_event_sources(urls: list[str] | None = None, logger=NULL) -> dict:
     """Fetch and parse the configured EVENT SOURCE URLs (first 50 unique).
 
     Returns a dict with the parsed exhibitors and a per-source report so the UI
-    can show what happened with each URL.
+    can show what happened with each URL. Each step is logged to ``logger`` for
+    the Logs+Costs tab.
     """
     urls = dedupe_keep_order(urls or EVENT_SOURCES, cap=50)
+    logger.event("run_start", f"Scrape {len(urls)} EVENT SOURCE URL(s)")
 
     all_exhibitors: list[dict] = []
     seen_names: set[str] = set()
@@ -99,8 +103,16 @@ def scrape_event_sources(urls: list[str] | None = None) -> dict:
 
     for url in urls:
         try:
+            t = perf_counter()
             html = fetch_html(url)
+            logger.event("http_fetch", f"GET {url} → 200, {len(html):,} bytes",
+                         duration_ms=(perf_counter() - t) * 1000)
+
+            t = perf_counter()
             parsed = parse_exhibitors_html(html, url)
+            logger.event("parse", f"parsed {len(parsed)} exhibitor cards",
+                         duration_ms=(perf_counter() - t) * 1000)
+
             new = 0
             for ex in parsed:
                 key = ex["name"].lower()
@@ -108,8 +120,10 @@ def scrape_event_sources(urls: list[str] | None = None) -> dict:
                     seen_names.add(key)
                     all_exhibitors.append(ex)
                     new += 1
+            logger.event("dedupe", f"+{new} unique exhibitors ({len(all_exhibitors)} total)")
             reports.append({"url": url, "status": "ok", "found": len(parsed), "added": new})
         except Exception as exc:  # noqa: BLE001 -- surface any failure to the UI
+            logger.event("http_fetch", f"GET {url} failed: {exc}", status="error")
             reports.append({"url": url, "status": "error", "error": str(exc)})
 
     # Category breakdown (mirrors the reference script's summary).
@@ -117,6 +131,7 @@ def scrape_event_sources(urls: list[str] | None = None) -> dict:
     for ex in all_exhibitors:
         for c in ex["categories"]:
             cats[c] = cats.get(c, 0) + 1
+    logger.event("aggregate", f"{len(cats)} categories across {len(all_exhibitors)} exhibitors")
 
     return {
         "exhibitors": all_exhibitors,

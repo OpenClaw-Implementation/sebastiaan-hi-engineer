@@ -137,5 +137,26 @@ h3 { font-size: 1rem; margin: 0 0 .15rem; }
   margin-top: .6rem;
 }
 
+/* --- Logs + Costs tab --- */
+.cumulative { text-align: right; }
+.cumulative .num { display: block; font-size: 1.6rem; font-weight: 700; color: var(--accent-2); }
+.cumulative .lbl { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+
+.run-status { font-weight: 700; font-size: .8rem; padding: .15rem .6rem; border-radius: 20px; text-transform: uppercase; letter-spacing: .04em; }
+.rs-running { background: rgba(246,196,83,.15); color: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+.rs-finished { background: rgba(43,212,167,.15); color: var(--accent-2); }
+.rs-error { background: rgba(255,107,107,.15); color: var(--error); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+table.events, table.runs { width: 100%; border-collapse: collapse; margin-top: .75rem; font-size: .88rem; }
+table.events th, table.events td, table.runs th, table.runs td { text-align: left; padding: .4rem .55rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.events th, table.runs th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+table.events .r, table.runs .r { text-align: right; }
+table.events tfoot td { border-bottom: none; padding-top: .6rem; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; }
+.tag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: .1rem .4rem; }
+tr.ev-error td { color: var(--error); }
+.scrape-all-wrap { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }

@@ -17,10 +17,13 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from time import perf_counter
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
+import costs
 import db
+from runlog import RunLogger
 from scrapers import icypeas
 from scrapers.exhibitors import scrape_event_sources
 from scrapers.media import scrape_media
@@ -84,15 +87,26 @@ def scraping_engine():
 
 @app.route("/scraping-engine/scrape", methods=["POST"])
 def scraping_engine_scrape():
-    result = scrape_event_sources()
-    result["scraped_at"] = _now()
-    _save(KEY_EXHIBITORS, result)
-    ok = sum(1 for s in result["sources"] if s["status"] == "ok")
-    flash(
-        f"Scraped {result['count']} unique exhibitors from {ok}/{len(result['sources'])} "
-        f"source(s).",
-        "success" if result["count"] else "error",
-    )
+    run_id = db.create_run("exhibitors", "Scrape exhibitors")
+    log = RunLogger(run_id)
+    try:
+        result = scrape_event_sources(logger=log)
+        result["scraped_at"] = _now()
+        t = perf_counter()
+        _save(KEY_EXHIBITORS, result)
+        log.event("supabase_write", "saved exhibitors → app_cache",
+                  duration_ms=(perf_counter() - t) * 1000)
+        db.finish_run(run_id)
+        ok = sum(1 for s in result["sources"] if s["status"] == "ok")
+        flash(
+            f"Scraped {result['count']} unique exhibitors from {ok}/{len(result['sources'])} "
+            f"source(s).",
+            "success" if result["count"] else "error",
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.event("error", str(exc), status="error")
+        db.finish_run(run_id, "error")
+        flash(f"Scrape failed: {exc}", "error")
     return redirect(url_for("scraping_engine"))
 
 
@@ -103,11 +117,17 @@ def scraping_engine_enrich():
         flash("No company name supplied.", "error")
         return redirect(url_for("scraping_engine"))
 
-    result = icypeas.find_people(company)
+    run_id = db.create_run("enrich", f"Find people · {company}")
+    log = RunLogger(run_id)
+    result = icypeas.find_people(company, logger=log)
     result["enriched_at"] = _now()
     store = _load(KEY_ENRICHMENT, {})
     store[company] = result
+    t = perf_counter()
     _save(KEY_ENRICHMENT, store)
+    log.event("supabase_write", "saved enrichment → app_cache",
+              duration_ms=(perf_counter() - t) * 1000)
+    db.finish_run(run_id, "finished" if result["ok"] else "error")
 
     if result["ok"]:
         flash(f"Icypeas: found {result['count']} contact(s) for '{company}'.", "success")
@@ -136,24 +156,26 @@ def content_engine_scrape():
         flash("Unknown source URL.", "error")
         return redirect(url_for("content_engine"))
 
+    to_scrape = [url] if url else targets  # blank = scrape all
+    label = f"Scrape {url}" if url else f"Scrape all media ({len(targets)} sources)"
+    run_id = db.create_run("media", label)
+    log = RunLogger(run_id)
+
     store = _load(KEY_MEDIA, {})
-    to_scrape = [url] if url else targets  # blank = scrape all (no-JS fallback)
     for target in to_scrape:
-        result = scrape_media(target)
+        result = scrape_media(target, logger=log)
         result["scraped_at"] = _now()
         store[target] = result
-        _save(KEY_MEDIA, store)  # incremental: survives a router timeout
+        t = perf_counter()
+        _save(KEY_MEDIA, store)  # incremental: each source persists as it completes
+        log.event("supabase_write", f"saved {target}", duration_ms=(perf_counter() - t) * 1000)
+    db.finish_run(run_id)
 
-    # JSON mode (used by the client-side "Scrape all" loop) -- no flash/redirect.
+    # Kicked off via keepalive fetch (the "Scrape all" button) -- no page is
+    # waiting on the response, so just acknowledge.
     if request.args.get("format") == "json":
-        r = store.get(url, {}) if url else {}
-        return {
-            "ok": r.get("ok", True),
-            "url": url,
-            "title": r.get("title", ""),
-            "listing_count": r.get("listing_count", 0),
-            "error": r.get("error"),
-        }
+        ok = sum(1 for t in to_scrape if store.get(t, {}).get("ok"))
+        return jsonify({"run_id": run_id, "scraped": ok, "total": len(to_scrape)})
 
     if url:
         r = store[url]
@@ -165,6 +187,29 @@ def content_engine_scrape():
         ok = sum(1 for t in targets if store.get(t, {}).get("ok"))
         flash(f"Scraped {ok}/{len(targets)} media sources.", "success" if ok else "error")
     return redirect(url_for("content_engine"))
+
+
+@app.route("/logs")
+def logs():
+    return render_template(
+        "logs.html",
+        active="logs",
+        runs=db.get_runs(limit=30),
+        latest=db.get_latest_run(),
+        cumulative=db.cumulative_spend(),
+        usd_per_credit=costs.USD_PER_CREDIT,
+    )
+
+
+@app.route("/logs/events")
+def logs_events():
+    """Polled by the Logs+Costs tab. Returns the latest (or a given) run plus its
+    events after ``after`` (event id cursor), and cumulative spend."""
+    after = request.args.get("after", default=0, type=int)
+    run_id = request.args.get("run_id")
+    run = db.get_run(run_id) if run_id else db.get_latest_run()
+    events = db.get_events(run["run_id"], after) if run else []
+    return jsonify({"run": run, "events": events, "cumulative": db.cumulative_spend()})
 
 
 @app.route("/healthz")

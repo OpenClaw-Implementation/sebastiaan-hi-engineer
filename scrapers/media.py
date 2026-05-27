@@ -15,10 +15,12 @@ the static HTML -- those are detected and flagged so the limitation is explicit.
 from __future__ import annotations
 
 import re
+from time import perf_counter
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
+from runlog import NULL
 from .fetcher import fetch_html
 
 MAX_TEXT_CHARS = 12000
@@ -128,13 +130,17 @@ def _visible_text(soup: BeautifulSoup) -> str:
     return "\n".join(ln for ln in lines if ln)[:MAX_TEXT_CHARS]
 
 
-def scrape_media(url: str) -> dict:
+def scrape_media(url: str, logger=NULL) -> dict:
     """Fetch one Media source URL and return structured, viewable content."""
     try:
         # Shorter timeout than the default so one slow portal can't blow the
         # request budget when scraping sources one after another.
+        t = perf_counter()
         html = fetch_html(url, timeout=12)
+        logger.event("http_fetch", f"GET {url} → 200, {len(html):,} bytes",
+                     duration_ms=(perf_counter() - t) * 1000)
     except Exception as exc:  # noqa: BLE001
+        logger.event("http_fetch", f"GET {url} failed: {exc}", status="error")
         return {"url": url, "ok": False, "error": str(exc)}
 
     soup = BeautifulSoup(html, "html.parser")
@@ -155,6 +161,11 @@ def scrape_media(url: str) -> dict:
             "the static HTML returned by a direct request contains only the page "
             "shell, not the company listings."
         )
+
+    logger.event(
+        "parse",
+        f"{len(listings)} listing(s)" + (" — JS-rendered, not in static HTML" if note else f" from {title or url}"),
+    )
 
     return {
         "url": url,

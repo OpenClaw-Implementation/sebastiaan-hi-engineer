@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Logs+Costs{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>Logs + Costs</h1>
+      <p class="muted">
+        Live, step-by-step record of every scrape — what runs, how long it takes,
+        and what it costs. Follows the most recent run automatically.
+      </p>
+    </div>
+    <div class="cumulative">
+      <span class="lbl">Total spend to date</span>
+      <span class="num" id="cum-usd">${{ '%.4f'|format(cumulative.usd) }}</span>
+      <span class="muted small"><span id="cum-credits">{{ '%.2f'|format(cumulative.credits) }}</span> credits · ${{ '%.3f'|format(usd_per_credit) }}/credit</span>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 id="run-label">Waiting for a run…</h2>
+    <span class="run-status" id="run-status">—</span>
+  </div>
+  <div class="muted small" id="run-meta"></div>
+  <table class="events" id="events">
+    <thead>
+      <tr><th>#</th><th>Action</th><th>Detail</th><th class="r">Time</th><th class="r">Credits</th><th class="r">Cost</th></tr>
+    </thead>
+    <tbody id="events-body">
+      <tr class="empty-row"><td colspan="6" class="muted">No steps yet. Trigger a scrape on another tab and watch it appear here.</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="4" class="r"><b>Run total</b></td><td class="r"><b id="run-credits">0</b></td><td class="r"><b id="run-usd">$0.00</b></td></tr>
+    </tfoot>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Run history</h2>
+  <table class="runs">
+    <thead><tr><th>Started (UTC)</th><th>Kind</th><th>Run</th><th>Status</th><th class="r">Credits</th><th class="r">Cost</th></tr></thead>
+    <tbody>
+      {% for r in runs %}
+        <tr>
+          <td class="mono">{{ (r.started_at or '')[:16]|replace('T',' ') }}</td>
+          <td><span class="tag">{{ r.kind }}</span></td>
+          <td>{{ r.label }}</td>
+          <td><span class="run-status rs-{{ r.status }}">{{ r.status }}</span></td>
+          <td class="r">{{ '%.2f'|format(r.total_credits or 0) }}</td>
+          <td class="r">${{ '%.4f'|format(r.total_usd or 0) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+  const state = { runId: null, lastId: 0 };
+  const $ = (id) => document.getElementById(id);
+
+  function fmtDur(ms) {
+    if (ms === null || ms === undefined) return "";
+    return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+  }
+  function fmtUsd(u) { return "$" + (u || 0).toFixed(4); }
+
+  function clearTable() {
+    $("events-body").innerHTML = "";
+    state.rowNum = 0;
+  }
+  function renderHeader(run) {
+    $("run-label").textContent = run.label || run.kind;
+    const st = $("run-status");
+    st.textContent = run.status;
+    st.className = "run-status rs-" + run.status;
+    const started = (run.started_at || "").slice(0, 19).replace("T", " ");
+    $("run-meta").textContent = `${run.kind} · started ${started} UTC`;
+    $("run-credits").textContent = (run.total_credits || 0).toFixed(2);
+    $("run-usd").textContent = fmtUsd(run.total_usd);
+  }
+  function appendRow(e) {
+    state.rowNum = (state.rowNum || 0) + 1;
+    const tr = document.createElement("tr");
+    if (e.status === "error") tr.className = "ev-error";
+    tr.innerHTML =
+      `<td class="muted">${state.rowNum}</td>` +
+      `<td><span class="tag">${e.action}</span></td>` +
+      `<td>${e.detail || ""}</td>` +
+      `<td class="r mono">${fmtDur(e.duration_ms)}</td>` +
+      `<td class="r mono">${e.credits ? e.credits : "—"}</td>` +
+      `<td class="r mono">${e.usd ? fmtUsd(e.usd) : "$0.00"}</td>`;
+    $("events-body").appendChild(tr);
+  }
+
+  async function tick() {
+    let delay = 1500;
+    try {
+      const res = await fetch(`/logs/events?after=${state.lastId}`);
+      const data = await res.json();
+      if (data.cumulative) {
+        $("cum-usd").textContent = fmtUsd(data.cumulative.usd);
+        $("cum-credits").textContent = (data.cumulative.credits || 0).toFixed(2);
+      }
+      if (data.run) {
+        if (data.run.run_id !== state.runId) {       // a new run became latest
+          state.runId = data.run.run_id;
+          state.lastId = 0;
+          clearTable();
+          renderHeader(data.run);
+          setTimeout(tick, 50);                       // immediately pull its events
+          return;
+        }
+        renderHeader(data.run);
+        for (const e of data.events) {
+          appendRow(e);
+          state.lastId = Math.max(state.lastId, e.id);
+        }
+        delay = data.run.status === "running" ? 1000 : 3000;
+      }
+    } catch (err) { delay = 3000; }
+    setTimeout(tick, delay);
+  }
+  tick();
+</script>
+
+{% endblock %}

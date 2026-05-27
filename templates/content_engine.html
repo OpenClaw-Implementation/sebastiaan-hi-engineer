@@ -24,29 +24,17 @@
 </section>
 
 <script>
-  // Scrape sources one at a time (each request stays well under Heroku's 30s
-  // router timeout); results persist to Supabase incrementally, then reload.
-  const SOURCES = {{ sources|tojson }};
-  const ENDPOINT = "{{ url_for('content_engine_scrape') }}?format=json";
+  // Kick off the server-side "scrape all" run (keepalive lets it keep running
+  // after we navigate away), then jump to Logs+Costs to watch it live.
   const btn = document.getElementById("scrape-all");
   const prog = document.getElementById("scrape-progress");
-  btn.addEventListener("click", async () => {
+  btn.addEventListener("click", () => {
     btn.disabled = true;
-    let ok = 0;
-    for (let i = 0; i < SOURCES.length; i++) {
-      prog.textContent = `Scraping ${i + 1} / ${SOURCES.length}…`;
-      try {
-        const res = await fetch(ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ url: SOURCES[i] }),
-        });
-        const data = await res.json();
-        if (data.ok) ok++;
-      } catch (e) { /* keep going */ }
-    }
-    prog.textContent = `Done — ${ok}/${SOURCES.length} scraped. Reloading…`;
-    location.reload();
+    prog.textContent = "Started — opening Logs+Costs…";
+    fetch("{{ url_for('content_engine_scrape') }}?format=json", {
+      method: "POST", keepalive: true,
+    }).catch(() => {});
+    setTimeout(() => { window.location.href = "{{ url_for('logs') }}"; }, 400);
   });
 </script>
 
