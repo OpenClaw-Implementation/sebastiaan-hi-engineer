@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -23,6 +24,29 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 
 _conn = None
 _lock = threading.Lock()
+
+# True until any DB call fails. Flipped back to True on the next successful call.
+# Routes consult ``is_healthy()`` to render a "DB unavailable" banner so a paused/
+# unreachable Supabase degrades the app gracefully instead of crashing it at boot.
+_HEALTHY = True
+
+
+def is_healthy() -> bool:
+    return _HEALTHY
+
+
+def _ok() -> None:
+    global _HEALTHY
+    if not _HEALTHY:
+        _HEALTHY = True
+        print("[db] recovered", file=sys.stderr)
+
+
+def _fail(where: str, err: Exception) -> None:
+    global _HEALTHY
+    if _HEALTHY:
+        _HEALTHY = False
+        print(f"[db] DEGRADED ({where}): {err}", file=sys.stderr)
 
 
 def using_db() -> bool:
@@ -79,6 +103,14 @@ def init_db() -> None:
     if not using_db():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         return
+    try:
+        _init_db_unsafe()
+        _ok()
+    except Exception as e:  # noqa: BLE001 -- boot must never crash on DB outage
+        _fail("init_db", e)
+
+
+def _init_db_unsafe() -> None:
     _run(
         lambda cur: cur.execute(
             """
@@ -132,7 +164,13 @@ def cache_get(key: str, default=None):
         row = cur.fetchone()
         return row[0] if row else default
 
-    return _run(_q)
+    try:
+        result = _run(_q)
+        _ok()
+        return result
+    except Exception as e:  # noqa: BLE001
+        _fail("cache_get", e)
+        return default
 
 
 def cache_set(key: str, value) -> None:
@@ -145,17 +183,21 @@ def cache_set(key: str, value) -> None:
 
     from psycopg2.extras import Json
 
-    _run(
-        lambda cur: cur.execute(
-            """
-            insert into app_cache (key, value, updated_at)
-            values (%s, %s, now())
-            on conflict (key) do update
-                set value = excluded.value, updated_at = now()
-            """,
-            (key, Json(value)),
+    try:
+        _run(
+            lambda cur: cur.execute(
+                """
+                insert into app_cache (key, value, updated_at)
+                values (%s, %s, now())
+                on conflict (key) do update
+                    set value = excluded.value, updated_at = now()
+                """,
+                (key, Json(value)),
+            )
         )
-    )
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("cache_set", e)
 
 
 # --------------------------------------------------------------------------- #
@@ -218,10 +260,14 @@ def create_run(kind: str, label: str = "", meta=None) -> str:
 
     from psycopg2.extras import Json
 
-    _run(lambda cur: cur.execute(
-        "insert into scrape_runs (run_id, kind, label, meta) values (%s, %s, %s, %s)",
-        (run_id, kind, label, Json(meta) if meta else None),
-    ))
+    try:
+        _run(lambda cur: cur.execute(
+            "insert into scrape_runs (run_id, kind, label, meta) values (%s, %s, %s, %s)",
+            (run_id, kind, label, Json(meta) if meta else None),
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("create_run", e)
     return run_id
 
 
@@ -242,13 +288,17 @@ def log_event(run_id, action, detail="", status="ok", duration_ms=None,
 
     from psycopg2.extras import Json
 
-    _run(lambda cur: cur.execute(
-        """insert into scrape_events
-               (run_id, action, detail, status, duration_ms, credits, usd, meta)
-           values (%s, %s, %s, %s, %s, %s, %s, %s)""",
-        (run_id, action, detail, status, duration_ms, credits, usd,
-         Json(meta) if meta else None),
-    ))
+    try:
+        _run(lambda cur: cur.execute(
+            """insert into scrape_events
+                   (run_id, action, detail, status, duration_ms, credits, usd, meta)
+               values (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (run_id, action, detail, status, duration_ms, credits, usd,
+             Json(meta) if meta else None),
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("log_event", e)
 
 
 def finish_run(run_id, status="finished") -> None:
@@ -264,14 +314,18 @@ def finish_run(run_id, status="finished") -> None:
         _file_save_runs(runs)
         return
 
-    _run(lambda cur: cur.execute(
-        """update scrape_runs set
-               status = %s, finished_at = now(),
-               total_credits = coalesce((select sum(credits) from scrape_events where run_id = %s), 0),
-               total_usd     = coalesce((select sum(usd)     from scrape_events where run_id = %s), 0)
-           where run_id = %s""",
-        (status, run_id, run_id, run_id),
-    ))
+    try:
+        _run(lambda cur: cur.execute(
+            """update scrape_runs set
+                   status = %s, finished_at = now(),
+                   total_credits = coalesce((select sum(credits) from scrape_events where run_id = %s), 0),
+                   total_usd     = coalesce((select sum(usd)     from scrape_events where run_id = %s), 0)
+               where run_id = %s""",
+            (status, run_id, run_id, run_id),
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("finish_run", e)
 
 
 def get_latest_run():
@@ -284,7 +338,10 @@ def get_latest_run():
         rows = _dictify(cur)
         return rows[0] if rows else None
 
-    return _run(q)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_latest_run", e); return None
 
 
 def get_run(run_id):
@@ -299,7 +356,10 @@ def get_run(run_id):
         rows = _dictify(cur)
         return rows[0] if rows else None
 
-    return _run(q)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_run", e); return None
 
 
 def get_events(run_id, after_id=0) -> list[dict]:
@@ -317,7 +377,10 @@ def get_events(run_id, after_id=0) -> list[dict]:
         )
         return _dictify(cur)
 
-    return _run(q)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_events", e); return []
 
 
 def get_runs(limit=30) -> list[dict]:
@@ -328,7 +391,10 @@ def get_runs(limit=30) -> list[dict]:
         cur.execute(f"select {_RUN_COLS} from scrape_runs order by started_at desc limit %s", (limit,))
         return _dictify(cur)
 
-    return _run(q)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_runs", e); return []
 
 
 def cumulative_spend() -> dict:
@@ -344,4 +410,7 @@ def cumulative_spend() -> dict:
         rows = _dictify(cur)
         return {"credits": rows[0]["c"], "usd": rows[0]["u"]}
 
-    return _run(q)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("cumulative_spend", e); return {"credits": 0, "usd": 0}

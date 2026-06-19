@@ -34,6 +34,12 @@ app.secret_key = os.environ.get("SECRET_KEY", "hi-engineer-dev-secret")
 
 db.init_db()
 
+
+@app.context_processor
+def _inject_db_health():
+    """Expose the DB health flag to every template (drives the unavailable banner)."""
+    return {"db_healthy": db.is_healthy()}
+
 # Cache keys in the app_cache table (or <key>.json in the file fallback).
 KEY_EXHIBITORS = "exhibitors"
 KEY_ENRICHMENT = "enrichment"

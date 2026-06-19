@@ -17,6 +17,15 @@
   </header>
 
   <main class="container">
+    {% if not db_healthy %}
+      <div class="flash flash-warn">
+        <b>Database temporarily unavailable.</b>
+        Tabs render but scrapes won't persist and Logs+Costs may be empty —
+        likely the Supabase free-tier project is paused. Restore it in the
+        <a href="https://supabase.com/dashboard/project/btjmadsiyvrbrwzwtojz" target="_blank" rel="noopener">Supabase dashboard</a>;
+        the app will pick back up automatically.
+      </div>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flashes">
