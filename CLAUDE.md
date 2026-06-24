@@ -28,11 +28,13 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
 - `runlog.py` — `RunLogger` (writes events + tallies cost) and `NULL` no-op logger.
 - `db.py` — persistence. `app_cache(key, value jsonb, updated_at)` holds the three
   JSON blobs (exhibitors / enrichment / media); `scrape_runs` + `scrape_events` hold
-  the Logs+Costs run/step history. All in Supabase Postgres so data survives dyno restarts. Connects via the **session pooler** (`aws-0-eu-west-1.pooler.
-  supabase.com:5432`, IPv4 — the direct `db.<ref>.supabase.co` host is IPv6-only and
-  unreachable from Heroku). RLS is enabled on `app_cache`; the app's `postgres` role
-  bypasses it, the public REST API is denied. Falls back to JSON files when
-  `DATABASE_URL` is unset (local dev).
+  the Logs+Costs run/step history. **Heroku Postgres `essential-0` ($5/mo)** —
+  schema is auto-created by `init_db()` on every dyno boot (idempotent
+  `create table if not exists` + indexes). `DATABASE_URL` is managed by the add-on
+  (`heroku pg:promote`). All db helpers degrade gracefully on connection errors
+  (return safe defaults, flip a health flag; the base template shows a "DB
+  unavailable" banner). Falls back to JSON files when `DATABASE_URL` is unset
+  (local dev).
 - `scrapers/sources.py` — source URLs derived from `EPCM Guide_Netherlands.xlsx`:
   - `EVENT_SOURCES` = Companies sheet · "EVENT SOURCE" (all 112 rows are one unique
     URL: the Food Tech Event exhibitor list). Deduped + capped at 50.
@@ -49,10 +51,13 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
   solidsprocessing, fluidsprocessing, industrielinqs, tim.pmg) are detected + flagged.
 - `templates/`, `static/style.css` — dark-themed tabbed UI.
 
-**Config vars:** `ICYPEAS_API_KEY`, `SECRET_KEY`, `DATABASE_URL` (Supabase pooler),
-`SCRAPED_AT_DISPLAY` (fixed "scraped" label), `ICYPEAS_USD_PER_CREDIT` (cost rate,
-default 0.019). **Dyno:** Basic, `gunicorn --timeout 120 --workers 3`.
-**Supabase project:** `btjmadsiyvrbrwzwtojz` (eu-west-1).
+**Config vars:** `ICYPEAS_API_KEY`, `SECRET_KEY`, `DATABASE_URL` (Heroku Postgres,
+managed by add-on), `SCRAPED_AT_DISPLAY` (fixed "scraped" label),
+`ICYPEAS_USD_PER_CREDIT` (cost rate, default 0.019).
+**Add-ons:** `heroku-postgresql:essential-0` (also `HEROKU_POSTGRESQL_OLIVE_URL`),
+`scheduler:standard` (Scheduler installed but no jobs needed now; `heartbeat.py`
+remains in the repo as an inert keep-alive from the prior Supabase era).
+**Dyno:** Basic, `gunicorn --timeout 120 --workers 3`.
 **Live URL:** https://hi-engineer-app-42963ff5fb67.herokuapp.com/
 **Note:** `EPCM Guide_Netherlands.xlsx` is gitignored (contact PII; not needed at runtime).
 
