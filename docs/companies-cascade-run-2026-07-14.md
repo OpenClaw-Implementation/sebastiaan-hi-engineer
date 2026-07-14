@@ -164,3 +164,79 @@ Assuming ~75 % early‑exit hit path, ~15 % full‑cascade hit path, ~10 % termi
   6 paths × 3 s). Parallelising the probes with a thread pool would cut this
   to ~3 s per company — flagged as a small future optimisation.
 
+---
+
+## 8. Actual full‑run results (supersedes the estimate above)
+
+Executed via a one‑off dyno (`heroku run python bulk_enrich.py`) so the cascade
+runs on the server without the 30 s router timeout. Full log written to
+`company_enrichment_log`; run also streamed to the Logs+Costs tab as one
+`enrich_bulk_all` run.
+
+### Aggregate
+
+| Metric | Value |
+|---|---:|
+| Companies processed in this run | 111 (the 6 sampled earlier were already enriched/terminal) |
+| Total directory (companies table) | **117** |
+| Runtime | **358 s (~6 min)** — 3.2 s / company avg |
+| Enriched | **97 / 117 (83 %)** |
+| Terminal (all legs miss) | 20 / 117 (17 %) |
+| Total credits burned across full directory | 39.7 |
+| Total spend across full directory | **$1.84** |
+| Avg cost / company | **$0.0157** |
+| Total attempts logged | 311 rows in `company_enrichment_log` |
+
+### By‑source breakdown
+
+| Source column value | Companies | Share |
+|---|---:|---:|
+| `icypeas_auto` (early‑exit hit path) | **92** | 79 % |
+| `apollo_auto` (fallback when IcyPeas missed) | 5 | 4 % |
+| unset (terminal) | 20 | 17 % |
+
+The early‑exit optimisation avoided ~92 Apollo calls at ~$0.05 each → **~$4.60
+saved on this run alone**. FullEnrich and AI Ark contributed zero enriched
+rows (both plans credit‑exhausted).
+
+### Field fill rates across the 117 rows
+
+| Field | Populated | Note |
+|---|---:|---|
+| `website` | 76 % | |
+| `linkedin_url` | 79 % | |
+| `linkedin_industry` | 71 % | |
+| `location` | 79 % | with NL‑bias fallback |
+| `summary` | 70 % | LinkedIn "About" text |
+| `news_url` | 39 % | site subpath probe |
+| `jobs_url` | 32 % | site subpath probe |
+| `tel` | 5 % | IcyPeas rarely returns phone; only the 5 Apollo rows have it |
+| `email` | 0 % | no leg currently supplies email — would need Icypeas email‑search (1 cr / email ≈ $2 extra for 117) |
+| `specialities` | 0 % | none of the working legs expose it |
+
+### Estimate vs. actual
+
+| | Estimated (§7) | Actual (§8) | Δ |
+|---|---:|---:|---:|
+| Total cost | $1.62 | $1.84 | +13 % |
+| Runtime | ~10 min | ~6 min | −40 % |
+| Fill rate | ~90 % | 83 % | −7 pp |
+
+The cost overshoot is entirely from the 20 terminal rows — each still burns
+the $0.05 Apollo call after every earlier leg misses, because early‑exit only
+fires on a successful hit. Runtime beat the estimate because site_probe was
+faster than the worst case for most companies.
+
+### Notes / candidate follow‑ups
+
+1. **Email column is empty.** Icypeas `email-search` costs 1 cr / found email
+   (~$0.02 / row at Basic plan). 117 rows × ~1 email/row ≈ **~$2 extra**.
+2. **Terminal‑row waste.** 20 companies × $0.05 (Apollo miss) = **$1 wasted**
+   on rows that yielded nothing. Cheap mitigation: run Apollo only when IcyPeas
+   didn't miss at all (i.e., dropping Apollo entirely and accepting the 15 %
+   recall loss it would cause — trade $1 for 15 % lower fill rate).
+3. **`tel` sparse.** 5 % fill rate. If phones matter, add a phone‑capable leg
+   (Datagma‑like) or scrape the company's `/contact` page.
+4. **`specialities` empty.** Would require actually scraping the LinkedIn
+   company page — none of the API legs surface it.
+
