@@ -21,12 +21,77 @@ MAX_TITLE = 200
 MAX_ITEMS = 200
 
 _WS = re.compile(r"\s+")
+
+# Titles that exactly match one of these (case-insensitive) are legal-page /
+# nav / index text, not real jobs or articles.
+_NOISE_EXACT = {
+    # Nav / language / control
+    "home", "menu", "login", "inloggen", "registreren", "register", "contact",
+    "contactgegevens", "search", "zoeken", "meer", "meer info", "read more",
+    "lees meer", "next", "vorige", "volgende", "previous", "nl", "en", "de", "fr",
+    "»", "←", "→", "share", "delen",
+    # Legal / boilerplate
+    "cookie", "cookies", "cookiebeleid", "cookie policy", "cookie statement",
+    "privacy", "privacybeleid", "privacy policy", "privacy statement",
+    "disclaimer", "algemene voorwaarden", "voorwaarden", "terms",
+    "terms & conditions", "terms of use", "sitemap", "colofon",
+    "faq", "veelgestelde vragen",
+    # Index / meta titles that get anchor-wrapped
+    "nieuws", "news", "blog", "articles", "artikelen", "actueel", "pers", "press",
+    "media", "updates", "insights",
+    "nieuws en artikelen", "nieuws en blog", "news & articles",
+    "alle nieuws", "alle artikelen", "alle vacatures", "alle jobs",
+    "vacatures", "jobs", "careers", "werken bij", "werken-bij", "carriere",
+    "over ons", "about", "about us", "team", "ons team", "our team",
+    "onze diensten", "onze producten", "diensten", "producten", "products",
+    "downloads", "brochures", "referenties", "cases", "case studies",
+    "algemeen", "general",
+}
+
+# Titles that start with any of these prefixes are almost always CTA nav links
+# ("Ontdek alle vacatures", "Bekijk alle nieuws", "Meer artikelen…").
+_NOISE_STARTSWITH = (
+    "ontdek alle ", "bekijk alle ", "toon alle ", "meer over ",
+    "alle vacatures", "alle nieuws", "alle artikelen", "alle jobs",
+    "lees meer ", "read more ", "learn more ", "meer nieuws",
+    "meer artikelen", "meer vacatures", "bekijk vacature",
+    "wilt u meer ", "want to know",
+)
+
+# Reject titles that are just digits / date-like punctuation.
+_NUMERIC_RE = re.compile(r"^[\d\s.,;:/\\|\-()]+$")
+
+# Kept for the noise filter — legacy name maintained for compatibility.
 _NAV_NOISE = re.compile(
     r"^(home|menu|login|inloggen|registreren|register|contact|cookie|privacy|"
     r"nieuws|news|over ons|about|zoeken|search|meer|meer info|read more|"
     r"lees meer|next|vorige|volgende|previous|nl|en|de|fr|»|←|→|share|delen)$",
     re.IGNORECASE,
 )
+
+
+def is_noise_title(title: str | None) -> bool:
+    """True if ``title`` looks like nav / legal / index chrome, not real content.
+
+    Called both at extraction time (skip the row) and by ``clean_noise.py`` to
+    delete rows that slipped through under an older, laxer filter.
+    """
+    if not title:
+        return True
+    t = title.strip()
+    if len(t) < MIN_TITLE or len(t) > MAX_TITLE:
+        return True
+    lower = t.lower()
+    if lower in _NOISE_EXACT:
+        return True
+    if any(lower.startswith(p) for p in _NOISE_STARTSWITH):
+        return True
+    if _NUMERIC_RE.match(t):
+        return True
+    # Must contain at least one letter.
+    if not re.search(r"[a-zA-ZÀ-ſ]", t):
+        return True
+    return False
 
 
 def _clean(text: str | None) -> str:
@@ -77,9 +142,7 @@ def extract_listings(html: str, base_url: str, link_hints: list[str]) -> list[di
         if href.startswith("#") or href.strip() in ("/", ""):
             continue
         title = _clean(a.get_text())
-        if not title or len(title) < MIN_TITLE or len(title) > MAX_TITLE:
-            continue
-        if _NAV_NOISE.match(title):
+        if is_noise_title(title):
             continue
 
         abs_url = urljoin(base_url, href)

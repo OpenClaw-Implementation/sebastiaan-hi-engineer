@@ -112,6 +112,29 @@
   </section>
 </div>
 
+<div class="two-col">
+  {% for kind in ['jobs', 'articles'] %}
+    {% set p = stats.pipelines[kind] %}
+    <section class="panel">
+      <h2>{{ kind|capitalize }} pipeline</h2>
+      <div class="stats" id="pipe-{{ kind }}">
+        <div class="stat"><span class="num" id="pipe-{{ kind }}-total">{{ p.summary.total_items }}</span><span class="lbl">{{ kind }} discovered</span></div>
+        <div class="stat"><span class="num" id="pipe-{{ kind }}-cwi">{{ p.summary.companies_with_items }}</span><span class="lbl">companies contributing</span></div>
+        <div class="stat"><span class="num" id="pipe-{{ kind }}-scr">{{ p.summary.companies_scraped }}</span><span class="lbl">companies scraped</span></div>
+      </div>
+      <table class="events" id="pipe-{{ kind }}-top" style="margin-top:.6rem"><thead><tr><th>Top {{ kind }} sources</th><th class="r">Count</th></tr></thead>
+        <tbody>
+        {% for r in p.top %}
+          <tr><td>{{ r.name }}</td><td class="r mono">{{ r.count }}</td></tr>
+        {% else %}
+          <tr><td class="muted" colspan="2">no data yet — run the {{ kind }} pipeline</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endfor %}
+</div>
+
 <section class="panel">
   <h2>
     Daily cost <span class="muted small">(last 14 days)</span>
@@ -231,6 +254,18 @@
       paintList('tbl-sources',    s.sources, r => `<span class="tag">${r.source}</span>`, r => r.count);
       paintDaily(s.daily_cost || []);
       paintSparkline(s.daily_cost || []);
+      // Pipelines (jobs + articles)
+      for (const k of ['jobs', 'articles']) {
+        const p = (s.pipelines || {})[k];
+        if (!p) continue;
+        $('pipe-' + k + '-total').textContent = p.summary.total_items;
+        $('pipe-' + k + '-cwi').textContent   = p.summary.companies_with_items;
+        $('pipe-' + k + '-scr').textContent   = p.summary.companies_scraped;
+        const tb = $('pipe-' + k + '-top').querySelector('tbody');
+        tb.innerHTML = (p.top || []).length
+          ? p.top.map(r => `<tr><td>${r.name}</td><td class="r mono">${r.count}</td></tr>`).join('')
+          : `<tr><td class="muted" colspan="2">no data yet — run the ${k} pipeline</td></tr>`;
+      }
     } catch (e) { /* silent — next tick will retry */ }
     setTimeout(poll, 7000);
   }

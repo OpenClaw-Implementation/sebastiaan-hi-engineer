@@ -1147,6 +1147,26 @@ def list_articles(company_id: int | None = None, since: str | None = None,
         _fail("list_articles", e); return []
 
 
+def top_pipeline_sources(kind: str, limit: int = 10) -> list[dict]:
+    """Top companies contributing rows to ``jobs`` / ``articles``."""
+    if not using_db():
+        return []
+    table = "jobs" if kind == "jobs" else "articles"
+
+    def q(cur):
+        cur.execute(f"""
+            select c.name as name, count(*)::int as count
+              from {table} t join companies c on c.id = t.company_id
+              group by c.name order by 2 desc limit %s
+        """, (limit,))
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("top_pipeline_sources", e); return []
+
+
 def pipeline_summary(kind: str) -> dict:
     """Overview counts for the /jobs or /articles tab header."""
     empty = {"total_items": 0, "companies_with_items": 0, "companies_with_website": 0,

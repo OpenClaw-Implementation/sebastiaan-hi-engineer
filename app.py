@@ -348,6 +348,16 @@ def _gather_stats(window: str) -> dict:
         "top_categories": db.top_categories(15),
         "runs": db.get_runs(limit=20),
         "daily_cost": db.daily_cost(14),
+        "pipelines": {
+            "jobs": {
+                "summary": db.pipeline_summary("jobs"),
+                "top": db.top_pipeline_sources("jobs", 10),
+            },
+            "articles": {
+                "summary": db.pipeline_summary("articles"),
+                "top": db.top_pipeline_sources("articles", 10),
+            },
+        },
     }
 
 
