@@ -296,7 +296,7 @@ def scraping_engine_sources_add():
     if not url:
         flash("URL required.", "error")
         return redirect(url_for("scraping_engine"))
-    if parser not in {"foodtech", "safetyevent", "algolia", "unsupported"}:
+    if parser not in {"foodtech", "easyfairs", "algolia", "safetyevent", "unsupported"}:
         parser = "unsupported"
     sid = db.upsert_event_source(url=url, label=label, parser=parser)
     flash(f"Saved source #{sid}: {label or url}", "success")

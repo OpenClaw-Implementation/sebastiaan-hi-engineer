@@ -16,18 +16,21 @@ DEFAULT_SOURCES = [
      "Food Tech Event", "foodtech"),
     ("https://mtconference.nl/nl/exposantenlijst/",
      "MT Conference", "foodtech"),
+    # Safety Event partners are JS-loaded by a Logo Showcase WP plugin that
+    # exposes no REST endpoint — needs a headless browser to enumerate.
+    # Marked unsupported for now (flip to Firecrawl parser once wired).
     ("https://www.safetyevent.nl/partners/",
-     "Safety Event (partners)", "safetyevent"),
+     "Safety Event (partners)", "unsupported"),
     ("https://www.empack.nl/exhibitors/",
-     "Empack (Easyfairs)", "algolia"),
+     "Empack (Easyfairs)", "easyfairs"),
     ("https://www.rotterdamprocessingweek.nl/exhibitors/",
-     "Rotterdam Processing Week (Easyfairs)", "algolia"),
+     "Rotterdam Processing Week (Easyfairs)", "easyfairs"),
     ("https://www.mrprocessing.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=M%2BR%20Rotterdam%202027",
-     "M+R Rotterdam 2027 (Easyfairs)", "algolia"),
+     "M+R Rotterdam 2027 (Easyfairs)", "easyfairs"),
     ("https://www.pumpsvalves.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=Pumps%20%26%20Valves%20Rotterdam%202027",
-     "Pumps & Valves Rotterdam 2027 (Easyfairs)", "algolia"),
+     "Pumps & Valves Rotterdam 2027 (Easyfairs)", "easyfairs"),
     ("https://www.solidsrotterdam.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=Solids%20Rotterdam%202027",
-     "Solids Rotterdam 2027 (Easyfairs)", "algolia"),
+     "Solids Rotterdam 2027 (Easyfairs)", "easyfairs"),
     # Known unsupported (JS-only or auth-gated) — kept in the table so the UI
     # shows them with an explanatory error rather than pretending they don't exist.
     ("https://www.vakbeursenergie.nl/nl/exposantenlijst/",
