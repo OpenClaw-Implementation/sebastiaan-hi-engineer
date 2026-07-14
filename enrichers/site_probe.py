@@ -13,10 +13,11 @@ import requests
 
 from .base import user_agent
 
-NEWS_PATHS = ("nieuws", "news", "media", "blog", "pers", "press", "actueel")
-JOBS_PATHS = ("vacatures", "werken-bij", "careers", "jobs", "carriere", "career")
+# Trimmed to the highest-hit-rate paths (NL suppliers prefer /nieuws/vacatures).
+NEWS_PATHS = ("nieuws", "news", "blog")
+JOBS_PATHS = ("vacatures", "careers", "jobs")
 
-TIMEOUT = 6
+TIMEOUT = 3  # short per-probe budget so a full 6-probe pass caps at ~15s worst-case
 
 
 def _absolute(website: str) -> str | None:

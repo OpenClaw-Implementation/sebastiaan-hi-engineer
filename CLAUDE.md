@@ -26,6 +26,19 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
   Icypeas costs today: find-people = **0.02 credit/result** (count is free); HTTP +
   Supabase = $0. Email/verify/AI slot in here. Rate = `ICYPEAS_USD_PER_CREDIT`.
 - `runlog.py` — `RunLogger` (writes events + tallies cost) and `NULL` no-op logger.
+- **Companies tab** (`/companies`, `templates/companies.html`) — 17-column normalized
+  supplier directory (`companies` table) plus a **4-leg enrichment cascade** run
+  cheapest-first (`IcyPeas → FullEnrich → AI Ark → Apollo` + a site-subpath probe
+  for News/Jobs). Per-row Enrich button (sync redirect) and Enrich-all-pending
+  (keepalive fetch + navigate to Logs+Costs). Each attempt writes to
+  `company_enrichment_log` **and** streams to the Logs+Costs tab via `RunLogger`.
+- `enrichers/` package: `icypeas` (via find-people, extracts `lastCompany*` fields —
+  find-companies is unusable on this tier), `fullenrich` (`/api/v2/company/search`),
+  `ai_ark` (`content` array + name-match guard), `apollo` (organizations/enrich by
+  domain hint, fallback to mixed_companies/search), `site_probe` (nieuws/news/blog +
+  vacatures/careers/jobs paths, 3s per-probe timeout), `cascade` orchestrator.
+- `normalize.py` — after every exhibitor scrape, upserts each into `companies`
+  (idempotent; enrichment columns preserved on re-runs).
 - `db.py` — persistence. `app_cache(key, value jsonb, updated_at)` holds the three
   JSON blobs (exhibitors / enrichment / media); `scrape_runs` + `scrape_events` hold
   the Logs+Costs run/step history. **Heroku Postgres `essential-0` ($5/mo)** —
@@ -53,7 +66,8 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
 
 **Config vars:** `ICYPEAS_API_KEY`, `SECRET_KEY`, `DATABASE_URL` (Heroku Postgres,
 managed by add-on), `SCRAPED_AT_DISPLAY` (fixed "scraped" label),
-`ICYPEAS_USD_PER_CREDIT` (cost rate, default 0.019).
+`ICYPEAS_USD_PER_CREDIT` (cost rate, default 0.019), `FULLENRICH_API_KEY`,
+`AI_ARK_API_KEY`, `APOLLO_API_KEY` (enrichment cascade).
 **Add-ons:** `heroku-postgresql:essential-0` (also `HEROKU_POSTGRESQL_OLIVE_URL`),
 `scheduler:standard` (Scheduler installed but no jobs needed now; `heartbeat.py`
 remains in the repo as an inert keep-alive from the prior Supabase era).
