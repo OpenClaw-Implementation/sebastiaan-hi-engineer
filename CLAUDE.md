@@ -21,7 +21,17 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
 - **Logs+Costs tab** (`/logs`, `templates/logs.html`): polls `/logs/events?after=<id>`
   (~1s) following the most-recent run, showing each step (action · detail · duration ·
   credits · $), a live run total, run history, and cumulative spend. Event `id`
-  (bigserial) is the poll cursor.
+  (bigserial) is the poll cursor. Run-history rows link to `/logs/<run_id>`
+  (`templates/run_detail.html`) for a per-run drill-down: run header, companies
+  touched, full event timeline.
+- **Stats tab** (`/stats`, `templates/stats.html`): analytics dashboard polling
+  `/stats/data?window=24h|7d|30d|all` every 7 s. Shows directory totals, cascade
+  by-source aggregates (attempts/hits/rate/avg-ms/$), field fill-rate bars,
+  top-15 industries / locations / categories, source distribution, 14-day daily
+  cost, and recent-runs table (each linked to the drill-down). Aggregations live
+  in `db.py`: `cascade_by_source`, `field_fill_rates`, `top_industries`,
+  `top_locations`, `top_categories`, `source_distribution`, `daily_cost`,
+  `run_detail` — all read-only, degrade-safe.
 - `costs.py` — single cost map. `cost_for(action, **kw)` → (credits, usd). Only
   Icypeas costs today: find-people = **0.02 credit/result** (count is free); HTTP +
   Supabase = $0. Email/verify/AI slot in here. Rate = `ICYPEAS_USD_PER_CREDIT`.
