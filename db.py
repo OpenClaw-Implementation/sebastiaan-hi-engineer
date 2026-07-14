@@ -104,7 +104,16 @@ def init_db() -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         return
     try:
-        _init_db_unsafe()
+        # Advisory lock serialises concurrent workers so that only one runs the
+        # DDL block at a time. Otherwise multiple `CREATE TABLE IF NOT EXISTS`
+        # sessions race on pg_type and one worker fails with
+        # `duplicate key value violates unique constraint pg_type_typname_nsp_index`,
+        # potentially leaving later tables in the block un-created.
+        _run(lambda cur: cur.execute("select pg_advisory_lock(1834521)"))
+        try:
+            _init_db_unsafe()
+        finally:
+            _run(lambda cur: cur.execute("select pg_advisory_unlock(1834521)"))
         _ok()
     except Exception as e:  # noqa: BLE001 -- boot must never crash on DB outage
         _fail("init_db", e)

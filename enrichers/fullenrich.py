@@ -6,7 +6,8 @@ import requests
 
 from .base import DEFAULT_TIMEOUT, envelope, env
 
-API_URL = env("FULLENRICH_COMPANIES_URL", "https://app.fullenrich.com/api/v2/companies/search")
+# Correct path is singular `company/search` (not `companies/search`).
+API_URL = env("FULLENRICH_COMPANIES_URL", "https://app.fullenrich.com/api/v2/company/search")
 
 
 def _pick(d: dict, *keys):
