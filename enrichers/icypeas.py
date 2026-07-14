@@ -56,26 +56,28 @@ def enrich_company(name: str, hints: dict | None = None) -> dict:
     if not api_key:
         return envelope("icypeas", error="ICYPEAS_API_KEY not set")
 
-    # Bias the query to the Netherlands so multinationals resolve to their NL
-    # presence (fixes e.g. ABB Robotics → Bengaluru because IcyPeas otherwise
-    # returns whichever country has the most indexed employees).
-    body = {
-        "query": {
-            "currentCompanyName": {"include": [name]},
-            "location": {"include": ["Netherlands", "Nederland", "Holland"]},
-        },
-        "pagination": {"size": 3},
-    }
-    try:
-        resp = requests.post(
-            FIND_PEOPLE_URL,
-            headers={"Content-Type": "application/json", "Authorization": api_key},
-            json=body,
-            timeout=DEFAULT_TIMEOUT,
-        )
-    except requests.exceptions.RequestException as e:
-        return envelope("icypeas", error=f"network: {e}")
+    # Two-pass strategy:
+    #   1. NL-filtered  — bias multinationals to their Dutch presence.
+    #   2. Global fallback — if NL returns 0 leads, retry unfiltered so we
+    #      still get *some* data for global companies with no NL LinkedIn footprint.
+    def _query(with_nl: bool) -> tuple[requests.Response | None, str | None]:
+        q: dict = {"currentCompanyName": {"include": [name]}}
+        if with_nl:
+            q["location"] = {"include": ["Netherlands", "Nederland", "Holland"]}
+        try:
+            r = requests.post(
+                FIND_PEOPLE_URL,
+                headers={"Content-Type": "application/json", "Authorization": api_key},
+                json={"query": q, "pagination": {"size": 3}},
+                timeout=DEFAULT_TIMEOUT,
+            )
+            return r, None
+        except requests.exceptions.RequestException as ex:
+            return None, f"network: {ex}"
 
+    resp, err = _query(with_nl=True)
+    if err:
+        return envelope("icypeas", error=err)
     if resp.status_code >= 400:
         return envelope("icypeas", error=f"http {resp.status_code}: {resp.text[:200]}",
                         raw=resp.text[:400])
@@ -87,6 +89,19 @@ def enrich_company(name: str, hints: dict | None = None) -> dict:
         return envelope("icypeas", error=data.get("message") or "api success=false", raw=data)
 
     leads = data.get("leads") or data.get("items") or data.get("results") or []
+    # Fallback pass without NL filter (only if the filtered pass returned nothing).
+    if not leads:
+        resp2, err2 = _query(with_nl=False)
+        if resp2 is not None and resp2.status_code < 400:
+            try:
+                data2 = resp2.json()
+                if data2.get("success") is not False:
+                    leads2 = data2.get("leads") or data2.get("items") or data2.get("results") or []
+                    if leads2:
+                        leads = leads2
+                        data = data2
+            except ValueError:
+                pass
     n = len(leads)
     credits = round(0.02 * n, 4)
     usd = round(credits * 0.019, 6)
