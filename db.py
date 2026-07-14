@@ -186,6 +186,9 @@ def _init_db_unsafe() -> None:
                 searched_at timestamptz not null default now()
             );
             create index if not exists company_enrich_log_idx on company_enrichment_log(company_id, id);
+            alter table company_enrichment_log
+                add column if not exists run_id uuid references scrape_runs(run_id) on delete set null;
+            create index if not exists company_enrich_log_run_idx on company_enrichment_log(run_id);
             """
         )
     )
@@ -604,7 +607,8 @@ def log_company_enrichment(company_id: int, attempt_no: int, source: str,
                            success: bool, duration_ms: int | None = None,
                            credits: float = 0.0, usd: float = 0.0,
                            error_message: str | None = None,
-                           details: dict | None = None) -> None:
+                           details: dict | None = None,
+                           run_id: str | None = None) -> None:
     if not using_db():
         return
     from psycopg2.extras import Json
@@ -612,10 +616,10 @@ def log_company_enrichment(company_id: int, attempt_no: int, source: str,
         _run(lambda cur: cur.execute(
             """insert into company_enrichment_log
                    (company_id, attempt_no, source, success, duration_ms,
-                    credits, usd, error_message, details)
-               values (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    credits, usd, error_message, details, run_id)
+               values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (company_id, attempt_no, source, success, duration_ms, credits, usd,
-             error_message, Json(details) if details else None),
+             error_message, Json(details) if details else None, run_id),
         ))
         _ok()
     except Exception as e:  # noqa: BLE001
@@ -632,6 +636,67 @@ def _window_where(window: str, col: str) -> str:
     """Build a WHERE clause fragment for a time window. Unknown → no filter."""
     interval = _WINDOWS.get(window)
     return f"where {col} > now() - interval '{interval}'" if interval else ""
+
+
+def cascade_by_source_with_deltas(window: str = "7d") -> list[dict]:
+    """Per-provider aggregates + delta % vs the previous same-length window.
+    For ``window='all'`` deltas are undefined and returned as None."""
+    if not using_db():
+        return []
+    if window not in _WINDOWS:
+        # All-time: just return current-window rows with null deltas
+        rows = cascade_by_source(window)
+        for r in rows:
+            r["delta_attempts_pct"] = None
+            r["delta_usd_pct"] = None
+        return rows
+
+    interval = _WINDOWS[window]
+
+    def q(cur):
+        cur.execute(f"""
+            with cur as (
+              select source,
+                     count(*)::int as attempts,
+                     sum(success::int)::int as hits,
+                     coalesce(sum(usd),0)::float as usd,
+                     coalesce(sum(credits),0)::float as credits,
+                     coalesce(avg(duration_ms),0)::int as avg_ms
+                from company_enrichment_log
+                where searched_at > now() - interval '{interval}'
+                group by source
+            ), prev as (
+              select source,
+                     count(*)::int as attempts,
+                     coalesce(sum(usd),0)::float as usd
+                from company_enrichment_log
+                where searched_at between now() - (interval '{interval}') * 2
+                                      and now() - interval '{interval}'
+                group by source
+            )
+            select c.source, c.attempts, c.hits,
+                   case when c.attempts > 0
+                        then round(100.0 * c.hits / c.attempts, 1)::float
+                        else 0 end as hit_rate_pct,
+                   c.avg_ms, c.credits, c.usd,
+                   coalesce(p.attempts, 0)::int as prev_attempts,
+                   coalesce(p.usd, 0)::float as prev_usd,
+                   case when coalesce(p.attempts, 0) > 0
+                        then round(100.0 * (c.attempts - p.attempts) / p.attempts, 0)::int
+                        else null end as delta_attempts_pct,
+                   case when coalesce(p.usd, 0) > 0
+                        then round(100.0 * (c.usd - p.usd) / p.usd, 0)::int
+                        else null end as delta_usd_pct
+              from cur c
+              left join prev p on p.source = c.source
+              order by c.attempts desc
+        """)
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("cascade_by_source_with_deltas", e); return []
 
 
 def cascade_by_source(window: str = "7d") -> list[dict]:
@@ -807,9 +872,7 @@ def run_detail(run_id: str) -> dict:
 
         companies: list[dict] = []
         if run["kind"] in ("enrich_company", "enrich_bulk_all", "enrich_batch"):
-            # company_enrichment_log has no run_id column, so associate via time
-            # window overlap with the run's [started_at, finished_at] range
-            # (small buffers so boundary rows still land in the right run).
+            # Prefer exact join on run_id (populated for new runs).
             cur.execute(
                 """
                 select c.id, c.name, c.enrich_status, c.enrich_source,
@@ -820,15 +883,37 @@ def run_detail(run_id: str) -> dict:
                        min(l.searched_at) as first_ts
                   from company_enrichment_log l
                   join companies c on c.id = l.company_id
-                 where l.searched_at between (%s::timestamptz - interval '2 seconds')
-                                         and (coalesce(%s::timestamptz, now())
-                                              + interval '2 seconds')
+                 where l.run_id = %s
                  group by c.id, c.name, c.enrich_status, c.enrich_source
                  order by first_ts
                 """,
-                (run["started_at"], run["finished_at"]),
+                (run_id,),
             )
             companies = _dictify(cur)
+
+            # Fall back to time-window overlap for legacy rows (before the
+            # run_id column existed on this table).
+            if not companies:
+                cur.execute(
+                    """
+                    select c.id, c.name, c.enrich_status, c.enrich_source,
+                           count(l.id)::int as attempts,
+                           sum(l.success::int)::int as hits,
+                           round(sum(l.credits)::numeric, 4)::float as credits,
+                           round(sum(l.usd)::numeric, 6)::float as usd,
+                           min(l.searched_at) as first_ts
+                      from company_enrichment_log l
+                      join companies c on c.id = l.company_id
+                     where l.run_id is null
+                       and l.searched_at between (%s::timestamptz - interval '2 seconds')
+                                             and (coalesce(%s::timestamptz, now())
+                                                  + interval '2 seconds')
+                     group by c.id, c.name, c.enrich_status, c.enrich_source
+                     order by first_ts
+                    """,
+                    (run["started_at"], run["finished_at"]),
+                )
+                companies = _dictify(cur)
 
         return {"run": run, "events": events, "companies": companies}
 

@@ -340,7 +340,7 @@ def _gather_stats(window: str) -> dict:
             "terminal": counts.get("terminal", 0),
             "cumulative": db.cumulative_spend(),
         },
-        "cascade": db.cascade_by_source(window),
+        "cascade": db.cascade_by_source_with_deltas(window),
         "fill_rates": db.field_fill_rates(),
         "sources": db.source_distribution(),
         "top_industries": db.top_industries(15),

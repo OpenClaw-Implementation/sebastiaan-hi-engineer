@@ -14,19 +14,33 @@ For each pending company:
 
 from __future__ import annotations
 
+import os
 from time import perf_counter
 
 import db
 
 from . import ai_ark, apollo, fullenrich, icypeas, site_probe
 
+
+def _enabled(name: str, default: bool) -> bool:
+    """Toggle a leg via `ENABLE_<NAME>` env var. Default: on for the workhorses
+    (IcyPeas, Apollo); off for legs known to be credit-exhausted (FullEnrich,
+    AI Ark) so they don't burn attempt-log noise + ~350 ms per company. Flip
+    the env var to 'true' on Heroku once those accounts are topped up."""
+    override = os.environ.get(f"ENABLE_{name.upper()}")
+    if override is None:
+        return default
+    return override.lower() in ("1", "true", "yes", "on")
+
+
 # Cheapest → most expensive. Each is (name, module, cost_action).
-PROVIDERS = [
-    ("icypeas", icypeas, "icypeas_find_companies"),
-    ("fullenrich", fullenrich, "fullenrich_company"),
-    ("ai_ark", ai_ark, "ai_ark_company"),
-    ("apollo", apollo, "apollo_organization"),
+_ALL_PROVIDERS = [
+    ("icypeas", icypeas, "icypeas_find_companies", True),
+    ("fullenrich", fullenrich, "fullenrich_company", False),  # off by default
+    ("ai_ark", ai_ark, "ai_ark_company", False),               # off by default
+    ("apollo", apollo, "apollo_organization", True),
 ]
+PROVIDERS = [(n, m, a) for (n, m, a, default_on) in _ALL_PROVIDERS if _enabled(n, default_on)]
 
 
 def _merge_missing(current: dict, new: dict) -> dict:
@@ -66,12 +80,14 @@ def enrich_one(company: dict, logger=None) -> dict:
         env = module.enrich_company(name, hints=collected)
         duration_ms = int((perf_counter() - t) * 1000)
 
-        # Log to DB audit table (per-attempt row).
+        # Log to DB audit table (per-attempt row). Passing run_id makes the
+        # row join to the drill-down view without needing a time-window heuristic.
         db.log_company_enrichment(
             company_id=company_id, attempt_no=attempt_no, source=src,
             success=bool(env["ok"]), duration_ms=duration_ms,
             credits=env["credits"], usd=env["usd"],
             error_message=env["error"], details={"fields": env["fields"], "raw": env["raw"]},
+            run_id=(logger.run_id if logger is not None else None),
         )
         # Stream to Logs+Costs tab.
         if logger is not None:
@@ -119,6 +135,7 @@ def enrich_one(company: dict, logger=None) -> dict:
             credits=0.0, usd=0.0,
             error_message=None if newly else "no news/jobs paths responded",
             details={"fields": newly},
+            run_id=(logger.run_id if logger is not None else None),
         )
         if logger is not None:
             logger.event("site_probe",

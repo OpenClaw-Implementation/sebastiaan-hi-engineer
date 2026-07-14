@@ -181,6 +181,10 @@ table.fillrates td.fr-pct { width: 60px; text-align: right; }
 .bar::after { content: ""; position: absolute; inset: 0; width: var(--pct, 0%); background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .3s ease; }
 table.runs a { color: var(--accent); text-decoration: none; }
 table.runs a:hover { text-decoration: underline; }
+.delta { font-size: .72rem; font-weight: 700; padding: .05rem .3rem; border-radius: 4px; margin-left: .25rem; letter-spacing: .01em; }
+.delta-up { color: var(--warn); background: rgba(246,196,83,.14); }   /* cost/attempts UP is neutral-to-warn */
+.delta-down { color: var(--accent-2); background: rgba(43,212,167,.14); }
+svg.spark { vertical-align: middle; margin-left: .6rem; opacity: .9; }
 
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }
