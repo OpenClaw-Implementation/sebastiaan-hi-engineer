@@ -115,3 +115,52 @@ Per‑attempt log from `company_enrichment_log` (annotated):
 
 See `2026-07-14-companies-tab-and-cascade.md` (task log) and this run report
 for the follow‑up assessment numbers.
+
+---
+
+## 7. Follow‑up assessment (same day, post‑optimisations)
+
+Re‑ran a chunked batch of 5 companies + a standalone re‑enrichment of ABB
+Robotics with the three optimisations in place.
+
+**Per‑attempt log (6 companies, 16 total attempts):**
+
+| Company | Legs actually called | Outcome | Cost |
+|---|---|---|---|
+| Aeson BV | icypeas ✓ → site_probe | early‑exit after IcyPeas | $0.00114 |
+| Anticimex | icypeas ✓ → site_probe | early‑exit | $0.00114 |
+| Aqua+ | icypeas ✓ → site_probe | early‑exit | $0.00114 |
+| Arcadis Nederland B.V. | icypeas ✓ → fullenrich → ai_ark → apollo → site_probe | IcyPeas hit lacked anchors → walked full cascade | $0.05114 |
+| ABB Robotics (in batch) | icypeas ✗ → fullenrich → ai_ark → apollo → site_probe | NL filter blocked, everything missed → terminal | $0.05 |
+| ABB Robotics (re‑enrich with 2‑pass fallback) | icypeas ✓ → site_probe | NL pass returned 0 → global fallback hit → early‑exit | $0.00114 |
+
+**Aggregate:** 6 companies, 16 attempts, **$0.1057 → $0.01762 average per
+company** (65 % cheaper than the $0.051 baseline).
+
+**NL filter trade‑off:** the two‑pass fallback (NL first, global second on
+miss) preserves data for both mid‑size Dutch suppliers (Aeson) AND global
+multinationals (ABB). ABB's location still comes back as Bengaluru — accepted
+compromise vs. no data at all.
+
+### Extrapolated full 117‑company cost (post‑optimisations)
+
+Assuming ~75 % early‑exit hit path, ~15 % full‑cascade hit path, ~10 % terminal:
+
+| Path | Companies | $ / company | Subtotal |
+|---|---:|---:|---:|
+| Early‑exit (icypeas anchors) | ~88 | $0.00114 | $0.10 |
+| Full cascade with IcyPeas hit | ~18 | $0.05114 | $0.92 |
+| Terminal (all miss, still bills Apollo) | ~12 | $0.05 | $0.60 |
+| **Total** | **117** | | **~$1.62** |
+
+**73 % cheaper than the $6 pre‑optimisation estimate.**
+
+### Runtime & chunking
+
+- Batch of 5 completed in **26 s** server‑side — safely under Heroku's 30 s
+  router timeout.
+- Client‑side JS loop chains batches; full 117 ≈ 24 batches × ~26 s = **~10 min**.
+- Bottleneck within a batch is now `site_probe` (up to ~18 s worst case,
+  6 paths × 3 s). Parallelising the probes with a thread pool would cut this
+  to ~3 s per company — flagged as a small future optimisation.
+
