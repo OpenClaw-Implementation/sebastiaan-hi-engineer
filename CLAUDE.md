@@ -26,12 +26,17 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
   touched, full event timeline.
 - **Stats tab** (`/stats`, `templates/stats.html`): analytics dashboard polling
   `/stats/data?window=24h|7d|30d|all` every 7 s. Shows directory totals, cascade
-  by-source aggregates (attempts/hits/rate/avg-ms/$), field fill-rate bars,
-  top-15 industries / locations / categories, source distribution, 14-day daily
-  cost, and recent-runs table (each linked to the drill-down). Aggregations live
-  in `db.py`: `cascade_by_source`, `field_fill_rates`, `top_industries`,
+  by-source aggregates (attempts / hits / rate / avg-ms / credits / $) **with
+  ± % deltas vs the previous same-length window**, field fill-rate bars, top-15
+  industries / locations / categories, source distribution, 14-day daily cost
+  (with inline SVG sparkline in the section header), and recent-runs table
+  (each linked to the `/logs/<run_id>` drill-down). Aggregations in `db.py`:
+  `cascade_by_source_with_deltas`, `field_fill_rates`, `top_industries`,
   `top_locations`, `top_categories`, `source_distribution`, `daily_cost`,
-  `run_detail` — all read-only, degrade-safe.
+  `run_detail`.
+- **Drill-down join** (`/logs/<run_id>`): `company_enrichment_log.run_id`
+  (nullable FK to `scrape_runs`) is written on every insert; `run_detail`
+  joins on `run_id` first and falls back to time-window overlap for legacy rows.
 - `costs.py` — single cost map. `cost_for(action, **kw)` → (credits, usd). Only
   Icypeas costs today: find-people = **0.02 credit/result** (count is free); HTTP +
   Supabase = $0. Email/verify/AI slot in here. Rate = `ICYPEAS_USD_PER_CREDIT`.
@@ -77,7 +82,9 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
 **Config vars:** `ICYPEAS_API_KEY`, `SECRET_KEY`, `DATABASE_URL` (Heroku Postgres,
 managed by add-on), `SCRAPED_AT_DISPLAY` (fixed "scraped" label),
 `ICYPEAS_USD_PER_CREDIT` (cost rate, default 0.019), `FULLENRICH_API_KEY`,
-`AI_ARK_API_KEY`, `APOLLO_API_KEY` (enrichment cascade).
+`AI_ARK_API_KEY`, `APOLLO_API_KEY` (enrichment cascade), `ENABLE_FULLENRICH`
++ `ENABLE_AI_ARK` (default off — set to `true` to re-include a leg once its
+account is topped up; icypeas + apollo always on).
 **Add-ons:** `heroku-postgresql:essential-0` (also `HEROKU_POSTGRESQL_OLIVE_URL`),
 `scheduler:standard` (Scheduler installed but no jobs needed now; `heartbeat.py`
 remains in the repo as an inert keep-alive from the prior Supabase era).
