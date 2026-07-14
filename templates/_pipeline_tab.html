@@ -1,0 +1,106 @@
+{# Shared template body used by /jobs and /articles. Include with:
+     {% include '_pipeline_tab.html' with context %}
+   Requires:
+     kind        - 'jobs' | 'articles'
+     items       - list of rows
+     summary     - dict from db.pipeline_summary(kind)
+     since       - active filter chip: '24h' | '7d' | 'all'
+     company_q   - active company search string
+     run_url     - url for the batch endpoint
+     tab_url     - url of this tab (for filter links) #}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>{{ kind|capitalize }}</h1>
+      <p class="muted">
+        Directory: {{ summary.companies_with_website }} companies with a website ·
+        {{ summary.companies_scraped }} scraped for {{ kind }} so far ·
+        {{ summary.companies_with_items }} of those had extractable {{ kind }}.
+        <br>
+        Total {{ kind }} discovered: <b>{{ summary.total_items }}</b>.
+        {% if summary.last_run_at %}
+          Last run: {{ (summary.last_run_at|string)[:16]|replace('T',' ') }} UTC.
+        {% endif %}
+      </p>
+    </div>
+    <div>
+      <button class="btn btn-primary" id="run-pipeline" type="button">Run {{ kind }} pipeline →</button>
+      <div id="batch-progress" class="muted small" style="margin-top:.4rem"></div>
+    </div>
+  </div>
+  <div class="chips" style="margin-top:.6rem">
+    <a class="chip{{ ' chip-active' if since=='all' }}" href="{{ tab_url }}?since=all&company={{ company_q }}">All</a>
+    <a class="chip{{ ' chip-active' if since=='7d' }}" href="{{ tab_url }}?since=7d&company={{ company_q }}">Last 7 d</a>
+    <a class="chip{{ ' chip-active' if since=='24h' }}" href="{{ tab_url }}?since=24h&company={{ company_q }}">Last 24 h</a>
+    <form method="get" action="{{ tab_url }}" style="display:inline">
+      <input type="hidden" name="since" value="{{ since }}">
+      <input class="btn btn-small" type="text" name="company" value="{{ company_q }}" placeholder="company search…" style="width:180px">
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <table class="events">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Title</th>
+        {% if kind == 'jobs' %}<th>Location</th>{% endif %}
+        <th>Discovered</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+        <tr>
+          <td class="mono small">{{ it.company }}</td>
+          <td>
+            {% if it.url %}<a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.title }}</a>
+            {% else %}{{ it.title }}{% endif %}
+            {% if kind == 'articles' and it.summary %}
+              <div class="muted small clip">{{ it.summary[:180] }}{% if it.summary|length > 180 %}…{% endif %}</div>
+            {% endif %}
+          </td>
+          {% if kind == 'jobs' %}<td>{{ it.location or '—' }}</td>{% endif %}
+          <td class="mono small">{{ (it.first_seen_at|string)[:16]|replace('T',' ') }}</td>
+          <td><a class="muted small" href="{{ it.source_page }}" target="_blank" rel="noopener">source</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="{{ 5 if kind == 'jobs' else 4 }}" class="muted">
+          No {{ kind }} discovered yet. Click <b>Run {{ kind }} pipeline</b> to fetch.
+        </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+  const btn = document.getElementById("run-pipeline");
+  const prog = document.getElementById("batch-progress");
+  const BATCH = 8;
+  const ENDPOINT = "{{ run_url }}";
+  if (btn) btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    let batchNo = 0, processed = 0, itemsNew = 0, errors = 0;
+    while (true) {
+      batchNo++;
+      prog.textContent = `Batch ${batchNo}: fetching up to ${BATCH} companies…`;
+      let data;
+      try {
+        const res = await fetch(`${ENDPOINT}?format=json&limit=${BATCH}`, { method: "POST" });
+        data = await res.json();
+      } catch (e) { prog.textContent = "Network error — retrying in 3 s…"; await new Promise(r=>setTimeout(r,3000)); continue; }
+      processed += data.processed || 0;
+      itemsNew  += data.items_new || 0;
+      errors    += data.errors || 0;
+      prog.textContent =
+        `Batch ${batchNo}: +${data.processed||0} companies, +${data.items_new||0} new. ` +
+        `Running totals: ${processed} companies, ${itemsNew} new items, ${errors} errors. ` +
+        `Remaining: ${data.remaining}.`;
+      if (!data.processed || data.remaining === 0) break;
+    }
+    prog.textContent = `All done — ${processed} companies, ${itemsNew} new items, ${errors} errors. Reloading…`;
+    setTimeout(() => window.location.reload(), 1200);
+  });
+</script>

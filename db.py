@@ -189,6 +189,42 @@ def _init_db_unsafe() -> None:
             alter table company_enrichment_log
                 add column if not exists run_id uuid references scrape_runs(run_id) on delete set null;
             create index if not exists company_enrich_log_run_idx on company_enrichment_log(run_id);
+
+            alter table companies add column if not exists jobs_last_scraped_at timestamptz;
+            alter table companies add column if not exists articles_last_scraped_at timestamptz;
+
+            create table if not exists jobs (
+                id bigserial primary key,
+                company_id bigint not null references companies(id) on delete cascade,
+                title text not null,
+                url text not null default '',
+                location text,
+                department text,
+                posted_at text,
+                source_page text not null,
+                first_seen_at timestamptz not null default now(),
+                last_seen_at timestamptz not null default now(),
+                raw jsonb,
+                unique (company_id, url, title)
+            );
+            create index if not exists jobs_company_idx on jobs(company_id);
+            create index if not exists jobs_first_seen_idx on jobs(first_seen_at desc);
+
+            create table if not exists articles (
+                id bigserial primary key,
+                company_id bigint not null references companies(id) on delete cascade,
+                title text not null,
+                url text not null,
+                published_at text,
+                summary text,
+                source_page text not null,
+                first_seen_at timestamptz not null default now(),
+                last_seen_at timestamptz not null default now(),
+                raw jsonb,
+                unique (company_id, url)
+            );
+            create index if not exists articles_company_idx on articles(company_id);
+            create index if not exists articles_first_seen_idx on articles(first_seen_at desc);
             """
         )
     )
@@ -468,7 +504,8 @@ COMPANY_COLS = (
     "id, name, category_1, category_2, category_3, location, tel, email, "
     "website, news_url, jobs_url, linkedin_url, linkedin_industry, summary, "
     "specialities, event_source, event_pitch, event_profile, logo_url, stand, "
-    "enrich_status, enrich_source, enriched_at, updated_at"
+    "enrich_status, enrich_source, enriched_at, updated_at, "
+    "jobs_last_scraped_at, articles_last_scraped_at"
 )
 
 # Fields the enrichment cascade may fill in. `event_*` are set at insert time.
@@ -921,3 +958,217 @@ def run_detail(run_id: str) -> dict:
         result = _run(q); _ok(); return result
     except Exception as e:  # noqa: BLE001
         _fail("run_detail", e); return empty
+
+
+# --------------------------------------------------------------------------- #
+# Jobs + Articles pipelines
+# --------------------------------------------------------------------------- #
+def companies_for_pipeline(pipeline: str, limit: int | None = None,
+                           stale_after: str = "1 hour") -> list[dict]:
+    """List companies eligible for the jobs or articles pipeline. Requires a
+    website; ordered oldest-first by that pipeline's `*_last_scraped_at`."""
+    if not using_db():
+        return []
+    col = "jobs_last_scraped_at" if pipeline == "jobs" else "articles_last_scraped_at"
+
+    def q(cur):
+        sql = f"""
+            select {COMPANY_COLS} from companies
+             where website is not null
+               and ({col} is null or {col} < now() - interval '{stale_after}')
+             order by {col} asc nulls first, name asc
+        """
+        params: list = []
+        if limit:
+            sql += " limit %s"
+            params.append(limit)
+        cur.execute(sql, tuple(params))
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("companies_for_pipeline", e); return []
+
+
+def count_companies_for_pipeline(pipeline: str, stale_after: str = "1 hour") -> int:
+    if not using_db():
+        return 0
+    col = "jobs_last_scraped_at" if pipeline == "jobs" else "articles_last_scraped_at"
+
+    def q(cur):
+        cur.execute(f"""
+            select count(*) from companies
+             where website is not null
+               and ({col} is null or {col} < now() - interval '{stale_after}')
+        """)
+        return cur.fetchone()[0]
+
+    try:
+        result = _run(q); _ok(); return int(result)
+    except Exception as e:  # noqa: BLE001
+        _fail("count_companies_for_pipeline", e); return 0
+
+
+def mark_company_scraped(company_id: int, pipeline: str) -> None:
+    col = "jobs_last_scraped_at" if pipeline == "jobs" else "articles_last_scraped_at"
+    if not using_db():
+        return
+    try:
+        _run(lambda cur: cur.execute(
+            f"update companies set {col} = now() where id = %s", (company_id,)
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("mark_company_scraped", e)
+
+
+def upsert_job(company_id: int, title: str, url: str, source_page: str,
+               location: str | None = None, department: str | None = None,
+               posted_at: str | None = None, raw: dict | None = None) -> bool:
+    """Insert-or-refresh a job row. Returns True if inserted, False if updated."""
+    if not using_db() or not title:
+        return False
+    from psycopg2.extras import Json
+
+    def q(cur):
+        cur.execute("""
+            insert into jobs (company_id, title, url, source_page, location,
+                              department, posted_at, raw)
+            values (%s, %s, %s, %s, %s, %s, %s, %s)
+            on conflict (company_id, url, title) do update set
+                last_seen_at = now(),
+                location    = coalesce(excluded.location,   jobs.location),
+                department  = coalesce(excluded.department, jobs.department),
+                posted_at   = coalesce(excluded.posted_at,  jobs.posted_at),
+                raw         = coalesce(excluded.raw,        jobs.raw)
+            returning (xmax = 0) as inserted
+        """, (company_id, title[:400], (url or "")[:1000], source_page[:1000],
+              location, department, posted_at, Json(raw) if raw else None))
+        return bool(cur.fetchone()[0])
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_job", e); return False
+
+
+def upsert_article(company_id: int, title: str, url: str, source_page: str,
+                   published_at: str | None = None, summary: str | None = None,
+                   raw: dict | None = None) -> bool:
+    if not using_db() or not title or not url:
+        return False
+    from psycopg2.extras import Json
+
+    def q(cur):
+        cur.execute("""
+            insert into articles (company_id, title, url, source_page,
+                                  published_at, summary, raw)
+            values (%s, %s, %s, %s, %s, %s, %s)
+            on conflict (company_id, url) do update set
+                last_seen_at  = now(),
+                title         = coalesce(excluded.title,        articles.title),
+                published_at  = coalesce(excluded.published_at, articles.published_at),
+                summary       = coalesce(excluded.summary,      articles.summary),
+                raw           = coalesce(excluded.raw,          articles.raw)
+            returning (xmax = 0) as inserted
+        """, (company_id, title[:400], url[:1000], source_page[:1000],
+              published_at, summary[:2000] if summary else None,
+              Json(raw) if raw else None))
+        return bool(cur.fetchone()[0])
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_article", e); return False
+
+
+def list_jobs(company_id: int | None = None, since: str | None = None,
+              limit: int = 500) -> list[dict]:
+    """Recent jobs across companies (or one company). ``since`` is a Postgres
+    interval string like '1 day' — filters on first_seen_at."""
+    if not using_db():
+        return []
+
+    def q(cur):
+        where = []
+        params: list = []
+        if company_id is not None:
+            where.append("j.company_id = %s")
+            params.append(company_id)
+        if since:
+            where.append(f"j.first_seen_at > now() - interval '{since}'")
+        w = ("where " + " and ".join(where)) if where else ""
+        cur.execute(f"""
+            select j.id, j.company_id, c.name as company, j.title, j.url, j.location,
+                   j.department, j.posted_at, j.source_page,
+                   j.first_seen_at, j.last_seen_at
+              from jobs j join companies c on c.id = j.company_id
+              {w}
+              order by j.first_seen_at desc, j.id desc
+              limit %s
+        """, tuple(params + [limit]))
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_jobs", e); return []
+
+
+def list_articles(company_id: int | None = None, since: str | None = None,
+                  limit: int = 500) -> list[dict]:
+    if not using_db():
+        return []
+
+    def q(cur):
+        where = []
+        params: list = []
+        if company_id is not None:
+            where.append("a.company_id = %s")
+            params.append(company_id)
+        if since:
+            where.append(f"a.first_seen_at > now() - interval '{since}'")
+        w = ("where " + " and ".join(where)) if where else ""
+        cur.execute(f"""
+            select a.id, a.company_id, c.name as company, a.title, a.url,
+                   a.published_at, a.summary, a.source_page,
+                   a.first_seen_at, a.last_seen_at
+              from articles a join companies c on c.id = a.company_id
+              {w}
+              order by a.first_seen_at desc, a.id desc
+              limit %s
+        """, tuple(params + [limit]))
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_articles", e); return []
+
+
+def pipeline_summary(kind: str) -> dict:
+    """Overview counts for the /jobs or /articles tab header."""
+    empty = {"total_items": 0, "companies_with_items": 0, "companies_with_website": 0,
+             "companies_scraped": 0, "last_run_at": None}
+    if not using_db():
+        return empty
+    table = "jobs" if kind == "jobs" else "articles"
+    stamp_col = "jobs_last_scraped_at" if kind == "jobs" else "articles_last_scraped_at"
+
+    def q(cur):
+        cur.execute(f"""
+            select
+              (select count(*) from {table})::int as total_items,
+              (select count(distinct company_id) from {table})::int as companies_with_items,
+              (select count(*) from companies where website is not null)::int as companies_with_website,
+              (select count(*) from companies where {stamp_col} is not null)::int as companies_scraped,
+              (select max({stamp_col}) from companies) as last_run_at
+        """)
+        rows = _dictify(cur)
+        return rows[0] if rows else empty
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("pipeline_summary", e); return empty

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Jobs{% endblock %}
+{% block content %}
+{% set kind = 'jobs' %}
+{% set tab_url = url_for('jobs') %}
+{% set run_url = url_for('jobs_run') %}
+{% include '_pipeline_tab.html' with context %}
+{% endblock %}

@@ -27,7 +27,7 @@ import db
 import normalize
 from enrichers import cascade as enrichment_cascade
 from runlog import RunLogger
-from scrapers import icypeas
+from scrapers import articles_pipeline, icypeas, jobs_pipeline
 from scrapers.exhibitors import scrape_event_sources
 from scrapers.media import scrape_media
 from scrapers.sources import EVENT_SOURCES, MEDIA_SOURCES, dedupe_keep_order
@@ -375,6 +375,81 @@ def stats_data():
 def run_detail_view(run_id):
     data = db.run_detail(run_id)
     return render_template("run_detail.html", active="logs", **data)
+
+
+def _pipeline_view(kind: str, template: str):
+    """Shared render for /jobs and /articles: list items + filters + summary."""
+    since_map = {"24h": "1 day", "7d": "7 days", "all": None}
+    since_key = request.args.get("since", "all")
+    since = since_map.get(since_key)
+    company_q = (request.args.get("company") or "").strip() or None
+    company_id = None
+    if company_q:
+        for c in db.list_companies():
+            if company_q.lower() in c["name"].lower():
+                company_id = c["id"]; break
+    items = (db.list_jobs(company_id=company_id, since=since, limit=500)
+             if kind == "jobs"
+             else db.list_articles(company_id=company_id, since=since, limit=500))
+    return render_template(
+        template, active=kind,
+        summary=db.pipeline_summary(kind),
+        items=items,
+        since=since_key,
+        company_q=company_q or "",
+    )
+
+
+@app.route("/jobs")
+def jobs():
+    return _pipeline_view("jobs", "jobs.html")
+
+
+@app.route("/articles")
+def articles():
+    return _pipeline_view("articles", "articles.html")
+
+
+def _run_pipeline_batch(kind: str):
+    """Chunked batch endpoint (used by the JS loop on each tab)."""
+    limit = max(1, min(int(request.args.get("limit", 8)), 30))
+    companies = db.companies_for_pipeline(kind, limit=limit)
+    scraper = (jobs_pipeline.scrape_jobs_for_company if kind == "jobs"
+               else articles_pipeline.scrape_articles_for_company)
+
+    run_kind = f"{kind}_pipeline"
+    run_id = db.create_run(run_kind, f"{kind.capitalize()} batch ({len(companies)})")
+    log = RunLogger(run_id)
+    totals = {"processed": 0, "items_new": 0, "items_seen": 0, "errors": 0}
+    for c in companies:
+        r = scraper(c, logger=log)
+        totals["processed"] += 1
+        totals["items_new"] += r["new"]
+        totals["items_seen"] += r["count"]
+        if r.get("error"):
+            totals["errors"] += 1
+    log.event("batch_summary",
+              f"{totals['processed']} companies · {totals['items_seen']} items seen "
+              f"({totals['items_new']} new) · {totals['errors']} errors")
+    db.finish_run(run_id)
+    remaining = db.count_companies_for_pipeline(kind)
+
+    if request.args.get("format") == "json":
+        return jsonify({"run_id": run_id, **totals, "remaining": remaining})
+    flash(f"{kind.capitalize()} batch: {totals['items_new']} new items across "
+          f"{totals['processed']} companies. {remaining} remaining.",
+          "success" if totals["items_seen"] else "error")
+    return redirect(url_for("jobs" if kind == "jobs" else "articles"))
+
+
+@app.route("/jobs/run", methods=["POST"])
+def jobs_run():
+    return _run_pipeline_batch("jobs")
+
+
+@app.route("/articles/run", methods=["POST"])
+def articles_run():
+    return _run_pipeline_batch("articles")
 
 
 @app.route("/healthz")
