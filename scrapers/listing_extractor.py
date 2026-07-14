@@ -22,6 +22,44 @@ MAX_ITEMS = 200
 
 _WS = re.compile(r"\s+")
 
+# URL patterns that indicate the link points at another listing / index /
+# feed page rather than an individual item (jobs or articles).
+_PAGINATION_PATH_RE = re.compile(r"/page/\d+/?$")
+_QUERY_PAGE_RE = re.compile(r"[?&](paged?|p)=\d+")
+_TAXONOMY_PATH_RE = re.compile(
+    r"/(tag|tags|category|categorie|categoriën|archief|archive|author|feed)(/|$)"
+)
+_FEED_URL_RE = re.compile(r"(\.rss$|\.xml$|/feed/?$|/rss/?$)")
+
+# Pagination-arrow characters we strip before comparing titles against the
+# noise exact-match list so "Next »", "Volgende ›", "« Previous" all collapse
+# to the plain word for the check.
+_ARROW_STRIP = re.compile(r"[»«›‹→←…]+")
+
+
+def _norm_url(u: str) -> str:
+    return (u or "").strip().rstrip("/").lower()
+
+
+def is_noise_url(url: str, source_page: str = "") -> bool:
+    """True if ``url`` looks like a pagination / taxonomy / feed / self-ref
+    link rather than a specific job or article."""
+    if not url:
+        return True
+    if source_page and _norm_url(url) == _norm_url(source_page):
+        return True
+    lower = url.lower()
+    if _PAGINATION_PATH_RE.search(lower):
+        return True
+    if _QUERY_PAGE_RE.search(lower):
+        return True
+    if _TAXONOMY_PATH_RE.search(lower):
+        return True
+    if _FEED_URL_RE.search(lower):
+        return True
+    return False
+
+
 # Titles that exactly match one of these (case-insensitive) are legal-page /
 # nav / index text, not real jobs or articles.
 _NOISE_EXACT = {
@@ -46,6 +84,12 @@ _NOISE_EXACT = {
     "onze diensten", "onze producten", "diensten", "producten", "products",
     "downloads", "brochures", "referenties", "cases", "case studies",
     "algemeen", "general",
+    # Pagination / carousel labels
+    "next", "previous", "vorige", "volgende",
+    "older posts", "newer posts", "oudere berichten", "nieuwere berichten",
+    "news & events", "news and events", "nieuwspagina",
+    "job section", "banen", "career opportunities",
+    "-", "|", "...",
 }
 
 # Titles that start with any of these prefixes are almost always CTA nav links
@@ -81,14 +125,26 @@ def is_noise_title(title: str | None) -> bool:
     t = title.strip()
     if len(t) < MIN_TITLE or len(t) > MAX_TITLE:
         return True
+    # Normalise pagination arrows out so "Next »", "« Vorige", "Volgende ›"
+    # all collapse to the plain word for the exact-match check.
+    stripped = _ARROW_STRIP.sub("", t).strip("-|·• \t")
     lower = t.lower()
-    if lower in _NOISE_EXACT:
+    stripped_lower = stripped.lower()
+    if lower in _NOISE_EXACT or stripped_lower in _NOISE_EXACT:
         return True
     if any(lower.startswith(p) for p in _NOISE_STARTSWITH):
         return True
+    # Titles that start with a lone dash ("- Vacatures") are almost always
+    # sub-section labels the extractor grabbed by accident.
+    if lower.startswith("- ") or lower.startswith("– ") or lower.startswith("— "):
+        return True
+    # "Page 2" / "Pagina 2" style pagination labels.
+    if re.match(r"^\s*(page|pagina)\s+\d+\s*$", lower):
+        return True
     if _NUMERIC_RE.match(t):
         return True
-    # Must contain at least one letter.
+    # Titles that are only pagination arrows / punctuation once we strip
+    # letters (i.e. no letter remains) → noise.
     if not re.search(r"[a-zA-ZÀ-ſ]", t):
         return True
     return False
@@ -147,6 +203,9 @@ def extract_listings(html: str, base_url: str, link_hints: list[str]) -> list[di
 
         abs_url = urljoin(base_url, href)
         if abs_url in seen:
+            continue
+        # URL-level noise filter: pagination, taxonomy, feeds, self-refs.
+        if is_noise_url(abs_url, base_url):
             continue
         seen.add(abs_url)
         out.append({"title": title, "url": abs_url, "snippet": _grab_snippet(a)})
