@@ -233,6 +233,20 @@ def _init_db_unsafe() -> None:
                 created_at timestamptz not null default now(),
                 last_login_at timestamptz
             );
+
+            create table if not exists event_sources (
+                id serial primary key,
+                url text unique not null,
+                label text,
+                parser text not null default 'unsupported',
+                active boolean not null default true,
+                last_scraped_at timestamptz,
+                last_count int,
+                last_error text,
+                meta jsonb,
+                created_at timestamptz not null default now()
+            );
+            create index if not exists event_sources_active_idx on event_sources(active);
             """
         )
     )
@@ -1273,3 +1287,125 @@ def list_users() -> list[dict]:
         result = _run(q); _ok(); return result
     except Exception as e:  # noqa: BLE001
         _fail("list_users", e); return []
+
+
+# --------------------------------------------------------------------------- #
+# Event sources (multi-event exhibitor scraping)
+# --------------------------------------------------------------------------- #
+_SOURCE_COLS = ("id, url, label, parser, active, last_scraped_at, "
+                "last_count, last_error, meta, created_at")
+
+
+def list_event_sources(only_active: bool = False) -> list[dict]:
+    if not using_db():
+        return []
+
+    def q(cur):
+        where = "where active = true" if only_active else ""
+        cur.execute(f"select {_SOURCE_COLS} from event_sources {where} "
+                    f"order by parser, url")
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_event_sources", e); return []
+
+
+def get_event_source(source_id: int) -> dict | None:
+    if not using_db():
+        return None
+
+    def q(cur):
+        cur.execute(f"select {_SOURCE_COLS} from event_sources where id = %s",
+                    (source_id,))
+        rows = _dictify(cur)
+        return rows[0] if rows else None
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_event_source", e); return None
+
+
+def upsert_event_source(url: str, label: str = "", parser: str = "unsupported",
+                        active: bool = True, meta: dict | None = None) -> int | None:
+    """Insert or update by URL. Returns row id."""
+    if not using_db() or not url:
+        return None
+    from psycopg2.extras import Json
+
+    def q(cur):
+        cur.execute("""
+            insert into event_sources (url, label, parser, active, meta)
+            values (%s, %s, %s, %s, %s)
+            on conflict (url) do update set
+                label = coalesce(excluded.label, event_sources.label),
+                parser = excluded.parser,
+                active = excluded.active,
+                meta   = coalesce(excluded.meta, event_sources.meta)
+            returning id
+        """, (url.strip(), label or None, parser, active,
+              Json(meta) if meta else None))
+        return cur.fetchone()[0]
+
+    try:
+        result = _run(q); _ok(); return int(result)
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_event_source", e); return None
+
+
+def delete_event_source(source_id: int) -> None:
+    if not using_db():
+        return
+    try:
+        _run(lambda cur: cur.execute(
+            "delete from event_sources where id = %s", (source_id,)
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("delete_event_source", e)
+
+
+def mark_source_scraped(source_id: int, count: int, error: str | None = None,
+                        meta_update: dict | None = None) -> None:
+    if not using_db():
+        return
+    from psycopg2.extras import Json
+    try:
+        _run(lambda cur: cur.execute("""
+            update event_sources
+               set last_scraped_at = now(),
+                   last_count = %s,
+                   last_error = %s,
+                   meta = case when %s::jsonb is not null
+                               then coalesce(meta,'{}'::jsonb) || %s::jsonb
+                               else meta end
+             where id = %s
+        """, (count, error,
+              Json(meta_update) if meta_update else None,
+              Json(meta_update) if meta_update else None,
+              source_id)))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("mark_source_scraped", e)
+
+
+def count_event_sources() -> dict:
+    """Return counts by active/inactive + total for the summary card."""
+    if not using_db():
+        return {"active": 0, "inactive": 0, "total": 0}
+
+    def q(cur):
+        cur.execute("select active, count(*)::int from event_sources group by active")
+        rows = cur.fetchall()
+        d = {"active": 0, "inactive": 0}
+        for active, n in rows:
+            d["active" if active else "inactive"] = n
+        d["total"] = d["active"] + d["inactive"]
+        return d
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("count_event_sources", e); return {"active": 0, "inactive": 0, "total": 0}

@@ -29,7 +29,7 @@ import db
 import normalize
 from enrichers import cascade as enrichment_cascade
 from runlog import RunLogger
-from scrapers import articles_pipeline, icypeas, jobs_pipeline
+from scrapers import articles_pipeline, event_sources as event_sources_module, icypeas, jobs_pipeline
 from scrapers.exhibitors import scrape_event_sources
 from scrapers.media import scrape_media
 from scrapers.sources import EVENT_SOURCES, MEDIA_SOURCES, dedupe_keep_order
@@ -134,6 +134,7 @@ def scraping_engine():
     if data and SCRAPED_AT_DISPLAY:
         data["scraped_at"] = SCRAPED_AT_DISPLAY
     enrichment = _load(KEY_ENRICHMENT, {})
+    sources = db.list_event_sources()
     return render_template(
         "scraping_engine.html",
         active="scraping",
@@ -141,6 +142,9 @@ def scraping_engine():
         enrichment=enrichment,
         event_sources=dedupe_keep_order(EVENT_SOURCES, cap=50),
         icypeas_ready=icypeas.has_api_key(),
+        sources=sources,
+        source_counts=db.count_event_sources(),
+        directory_counts=db.count_companies_by_status(),
     )
 
 
@@ -282,6 +286,74 @@ def logs_events():
     run = db.get_run(run_id) if run_id else db.get_latest_run()
     events = db.get_events(run["run_id"], after) if run else []
     return jsonify({"run": run, "events": events, "cumulative": db.cumulative_spend()})
+
+
+@app.route("/scraping-engine/sources", methods=["POST"])
+def scraping_engine_sources_add():
+    url = (request.form.get("url") or "").strip()
+    label = (request.form.get("label") or "").strip()
+    parser = (request.form.get("parser") or "unsupported").strip()
+    if not url:
+        flash("URL required.", "error")
+        return redirect(url_for("scraping_engine"))
+    if parser not in {"foodtech", "safetyevent", "algolia", "unsupported"}:
+        parser = "unsupported"
+    sid = db.upsert_event_source(url=url, label=label, parser=parser)
+    flash(f"Saved source #{sid}: {label or url}", "success")
+    return redirect(url_for("scraping_engine"))
+
+
+@app.route("/scraping-engine/sources/<int:sid>/delete", methods=["POST"])
+def scraping_engine_sources_delete(sid):
+    db.delete_event_source(sid)
+    flash(f"Deleted source #{sid}.", "success")
+    return redirect(url_for("scraping_engine"))
+
+
+@app.route("/scraping-engine/sources/<int:sid>/scrape", methods=["POST"])
+def scraping_engine_sources_scrape(sid):
+    """Server-side: scrape one source, upsert each exhibitor into companies,
+    mark the source as scraped. Returns JSON with count for the JS orchestrator."""
+    source = db.get_event_source(sid)
+    if not source:
+        return jsonify({"error": "not_found"}), 404
+
+    run_id = db.create_run("source_scrape",
+                           f"Scrape source: {source.get('label') or source['url']}")
+    log = RunLogger(run_id)
+    try:
+        result = event_sources_module.scrape_source(source, logger=log)
+        added = updated = 0
+        for ex in result["exhibitors"]:
+            cid = db.upsert_company_from_exhibitor(ex)
+            if cid:
+                added += 1
+        t = perf_counter()
+        # Persist bookkeeping on the source row
+        db.mark_source_scraped(sid, result["count"], error=result.get("error"),
+                               meta_update=result.get("meta_update"))
+        log.event("source_persist",
+                  f"upserted {added} into companies · "
+                  f"marked source scraped at now()",
+                  duration_ms=(perf_counter() - t) * 1000)
+        db.finish_run(run_id, "finished" if not result["error"] else "error")
+    except Exception as exc:  # noqa: BLE001
+        log.event("error", str(exc), status="error")
+        db.finish_run(run_id, "error")
+        return jsonify({"error": str(exc), "run_id": run_id}), 500
+
+    if request.args.get("format") == "json":
+        return jsonify({
+            "run_id": run_id,
+            "source_id": sid,
+            "count": result["count"],
+            "upserted": added,
+            "error": result.get("error"),
+        })
+    flash(f"Scraped {source.get('label') or source['url']}: "
+          f"{result['count']} exhibitors → upserted {added} companies.",
+          "success" if result["count"] and not result["error"] else "error")
+    return redirect(url_for("scraping_engine"))
 
 
 @app.route("/companies")

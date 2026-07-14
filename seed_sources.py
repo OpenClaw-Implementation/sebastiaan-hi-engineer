@@ -1,0 +1,65 @@
+"""One-off: seed the 11 event source URLs. Idempotent — reruns just refresh
+labels/parsers without touching last_scraped_at.
+
+    heroku run python seed_sources.py -a hi-engineer-app
+"""
+
+from __future__ import annotations
+
+import sys
+
+import db
+
+DEFAULT_SOURCES = [
+    # url, label, parser
+    ("https://food-tech-event.nl/nl/exposantenlijst/",
+     "Food Tech Event", "foodtech"),
+    ("https://mtconference.nl/nl/exposantenlijst/",
+     "MT Conference", "foodtech"),
+    ("https://www.safetyevent.nl/partners/",
+     "Safety Event (partners)", "safetyevent"),
+    ("https://www.empack.nl/exhibitors/",
+     "Empack (Easyfairs)", "algolia"),
+    ("https://www.rotterdamprocessingweek.nl/exhibitors/",
+     "Rotterdam Processing Week (Easyfairs)", "algolia"),
+    ("https://www.mrprocessing.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=M%2BR%20Rotterdam%202027",
+     "M+R Rotterdam 2027 (Easyfairs)", "algolia"),
+    ("https://www.pumpsvalves.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=Pumps%20%26%20Valves%20Rotterdam%202027",
+     "Pumps & Valves Rotterdam 2027 (Easyfairs)", "algolia"),
+    ("https://www.solidsrotterdam.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=Solids%20Rotterdam%202027",
+     "Solids Rotterdam 2027 (Easyfairs)", "algolia"),
+    # Known unsupported (JS-only or auth-gated) — kept in the table so the UI
+    # shows them with an explanatory error rather than pretending they don't exist.
+    ("https://www.vakbeursenergie.nl/nl/exposantenlijst/",
+     "Vakbeurs Energie", "unsupported"),
+    ("https://www.provada.nl/bezoekers/standhouders",
+     "Provada", "unsupported"),
+    ("https://www.linkedin.com/school/mikrocentrum/people/",
+     "Mikrocentrum (LinkedIn)", "unsupported"),
+]
+
+
+def main() -> int:
+    if not db.using_db():
+        print("ERROR: DATABASE_URL not set"); return 2
+    db.init_db()
+    created = updated = 0
+    for url, label, parser in DEFAULT_SOURCES:
+        existing = None
+        for s in db.list_event_sources():
+            if s["url"] == url:
+                existing = s; break
+        rid = db.upsert_event_source(url=url, label=label, parser=parser, active=True)
+        if existing:
+            updated += 1
+            print(f"  updated  #{rid:<3} [{parser:12}] {label}")
+        else:
+            created += 1
+            print(f"  created  #{rid:<3} [{parser:12}] {label}")
+    print(f"\n{created} created, {updated} updated. Total in table: "
+          f"{len(db.list_event_sources())}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

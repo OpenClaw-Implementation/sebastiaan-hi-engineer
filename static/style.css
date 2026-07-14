@@ -186,6 +186,14 @@ table.runs a:hover { text-decoration: underline; }
 .delta-down { color: var(--accent-2); background: rgba(43,212,167,.14); }
 svg.spark { vertical-align: middle; margin-left: .6rem; opacity: .9; }
 
+/* --- Source table (add-source form) --- */
+.add-source { display: flex; gap: .5rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
+.add-source input, .add-source select {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+  padding: .4rem .55rem; color: var(--text); font: inherit; font-size: .85rem;
+}
+.add-source input:focus, .add-source select:focus { outline: none; border-color: var(--accent); }
+
 /* --- Auth / login --- */
 .topbar { justify-content: space-between; }
 .user-chip { display: flex; align-items: center; gap: .5rem; padding: 0 1rem; }

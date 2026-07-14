@@ -5,32 +5,143 @@
 <section class="panel">
   <div class="panel-head">
     <div>
-      <h1>Scraping Engine</h1>
+      <h1>Scraping Engine — Event sources</h1>
       <p class="muted">
-        Source: Companies sheet · column <strong>EVENT SOURCE</strong> (first 50 unique URLs).
-        Parsed into structured exhibitor profiles, then enriched with Icypeas
-        people search by company name.
+        Manage the input URLs. Each row runs through its own parser
+        (foodtech · safetyevent · algolia · unsupported), upserts into
+        the <a href="{{ url_for('companies') }}"><code>companies</code></a> table,
+        then optionally chains enrichment + jobs + articles.
       </p>
+      <div class="stats" style="margin-top:.5rem">
+        <div class="stat"><span class="num">{{ source_counts.active }}</span><span class="lbl">active sources</span></div>
+        <div class="stat"><span class="num">{{ source_counts.inactive }}</span><span class="lbl">unsupported</span></div>
+        <div class="stat"><span class="num">{{ directory_counts.get('total', 0) }}</span><span class="lbl">companies in directory</span></div>
+      </div>
     </div>
-    <form method="post" action="{{ url_for('scraping_engine_scrape') }}">
-      <button class="btn btn-primary" type="submit">
-        {{ 'Re-scrape exhibitors' if data else 'Scrape exhibitors' }}
-      </button>
-    </form>
+    <div>
+      <button class="btn btn-primary" id="run-full-pipeline" type="button">Run FULL pipeline (all active) →</button>
+      <div class="muted small" style="margin-top:.35rem" id="full-progress"></div>
+    </div>
   </div>
 
-  <ul class="sources">
-    {% for url in event_sources %}
-      <li><code>{{ url }}</code></li>
-    {% endfor %}
-  </ul>
+  <table class="events" style="margin-top:.75rem">
+    <thead>
+      <tr><th>URL / Label</th><th>Parser</th><th>Last scraped</th><th class="r">Last count</th><th>Error</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in sources %}
+        <tr>
+          <td>
+            <div><b>{{ s.label or s.url }}</b></div>
+            <div class="muted small"><code>{{ s.url }}</code></div>
+          </td>
+          <td><span class="tag">{{ s.parser }}</span></td>
+          <td class="mono small">{{ (s.last_scraped_at|string)[:16]|replace('T',' ') if s.last_scraped_at else '—' }}</td>
+          <td class="r mono">{{ s.last_count if s.last_count is not none else '—' }}</td>
+          <td class="muted small clip">{{ (s.last_error or '')[:80] }}</td>
+          <td>
+            {% if s.parser != 'unsupported' %}
+              <button class="btn btn-small scrape-src" data-id="{{ s.id }}" data-label="{{ s.label or s.url }}" type="button">Scrape</button>
+            {% endif %}
+            <form method="post" action="{{ url_for('scraping_engine_sources_delete', sid=s.id) }}" style="display:inline"
+                  onsubmit="return confirm('Delete source {{ s.label or s.url }}?')">
+              <button class="btn btn-small" type="submit">✕</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No sources yet — add one below.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-  {% if not icypeas_ready %}
-    <div class="flash flash-warn">
-      Icypeas enrichment is disabled — set the <code>ICYPEAS_API_KEY</code> config var to enable it.
-    </div>
-  {% endif %}
+  <details style="margin-top:.75rem">
+    <summary class="muted">Add source</summary>
+    <form method="post" action="{{ url_for('scraping_engine_sources_add') }}" class="add-source">
+      <input type="url" name="url" placeholder="https://…" required style="width:400px">
+      <input type="text" name="label" placeholder="label (optional)">
+      <select name="parser">
+        <option value="foodtech">foodtech (card-introduce)</option>
+        <option value="safetyevent">safetyevent (Logo Slider)</option>
+        <option value="algolia">algolia (Easyfairs)</option>
+        <option value="unsupported">unsupported (JS-only / auth)</option>
+      </select>
+      <button class="btn btn-small" type="submit">Add</button>
+    </form>
+  </details>
 </section>
+
+<script>
+  // Per-row Scrape button — POST /scraping-engine/sources/<id>/scrape?format=json
+  for (const btn of document.querySelectorAll('.scrape-src')) {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const orig = btn.textContent;
+      btn.textContent = '…';
+      try {
+        const r = await fetch(`/scraping-engine/sources/${btn.dataset.id}/scrape?format=json`, {method:'POST'});
+        const d = await r.json();
+        btn.textContent = d.error ? `err (${d.count})` : `✓ ${d.count} → +${d.upserted}`;
+      } catch (e) {
+        btn.textContent = 'network err';
+      }
+    });
+  }
+
+  // Full-pipeline orchestrator — walks scrape → enrich → jobs → articles
+  const full = document.getElementById('run-full-pipeline');
+  const prog = document.getElementById('full-progress');
+  const activeSourceIds = {{ sources|selectattr('parser','ne','unsupported')|selectattr('active')|map(attribute='id')|list|tojson }};
+  if (full) full.addEventListener('click', async () => {
+    full.disabled = true;
+    let totalScraped = 0, totalNew = 0;
+    // Stage 1 — scrape each source
+    for (let i = 0; i < activeSourceIds.length; i++) {
+      prog.textContent = `Scraping ${i+1}/${activeSourceIds.length} sources…`;
+      try {
+        const r = await fetch(`/scraping-engine/sources/${activeSourceIds[i]}/scrape?format=json`, {method:'POST'});
+        const d = await r.json();
+        totalScraped += d.count || 0;
+        totalNew    += d.upserted || 0;
+      } catch (e) { /* keep going */ }
+    }
+    prog.textContent = `Scrape done: ${totalScraped} exhibitors across ${activeSourceIds.length} sources · ${totalNew} upserted. Enriching pending…`;
+    // Stage 2 — enrich
+    let batch = 0;
+    while (true) {
+      batch++;
+      try {
+        const r = await fetch(`/companies/enrich-all?format=json&limit=10`, {method:'POST'});
+        const d = await r.json();
+        prog.textContent = `Enrich batch ${batch}: +${d.filled||0} filled · remaining ${d.remaining_pending}`;
+        if (!d.processed || d.remaining_pending === 0) break;
+      } catch (e) { await new Promise(r=>setTimeout(r,3000)); }
+    }
+    // Stage 3 — jobs
+    batch = 0;
+    while (true) {
+      batch++;
+      try {
+        const r = await fetch(`/jobs/run?format=json&limit=8`, {method:'POST'});
+        const d = await r.json();
+        prog.textContent = `Jobs batch ${batch}: +${d.items_new||0} new · remaining ${d.remaining}`;
+        if (!d.processed || d.remaining === 0) break;
+      } catch (e) { await new Promise(r=>setTimeout(r,3000)); }
+    }
+    // Stage 4 — articles
+    batch = 0;
+    while (true) {
+      batch++;
+      try {
+        const r = await fetch(`/articles/run?format=json&limit=8`, {method:'POST'});
+        const d = await r.json();
+        prog.textContent = `Articles batch ${batch}: +${d.items_new||0} new · remaining ${d.remaining}`;
+        if (!d.processed || d.remaining === 0) break;
+      } catch (e) { await new Promise(r=>setTimeout(r,3000)); }
+    }
+    prog.textContent = `DONE — ${totalNew} new companies pipelined through enrichment + jobs + articles. See /logs for detail.`;
+  });
+</script>
 
 {% if data %}
   <section class="panel">
