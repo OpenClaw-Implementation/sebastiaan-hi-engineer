@@ -24,6 +24,13 @@ _CREDIT_RULES: dict[str, tuple[str, float]] = {
     "icypeas_email_search": ("emails", 1.0),
     "icypeas_email_verify": ("emails", 0.1),
     "icypeas_reverse_lookup": ("profiles", 10.0),
+    # Non-Icypeas providers pass an explicit `credits=` override, so no rule
+    # needed for the cost math -- but we still register them so the actions are
+    # recognised, documented, and appear in the Logs+Costs cost audit.
+    "fullenrich_company": ("results", 0.0),     # free on operator plan
+    "ai_ark_company": ("results", 0.0),         # free tier / X-TOKEN plan
+    "apollo_organization": ("calls", 1.0),      # 1 credit/call; $/credit varies by plan
+    "site_probe": ("calls", 0.0),               # free direct HTTP
 }
 
 

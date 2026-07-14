@@ -158,5 +158,17 @@ table.events tfoot td { border-bottom: none; padding-top: .6rem; }
 tr.ev-error td { color: var(--error); }
 .scrape-all-wrap { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 
+/* --- Companies tab --- */
+.chip-active { border-color: var(--accent); color: var(--accent); }
+.companies-wrap { overflow-x: auto; padding: .5rem; }
+table.companies { width: 100%; border-collapse: collapse; font-size: .8rem; min-width: 1600px; }
+table.companies th, table.companies td { text-align: left; padding: .5rem .55rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.companies th { color: var(--muted); font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--panel); z-index: 1; }
+table.companies td.clip { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.companies tr:hover td { background: rgba(79,156,249,.04); }
+table.companies tr.rs-enriched td { background: rgba(43,212,167,.03); }
+table.companies tr.rs-terminal td { color: var(--muted); }
+img.tiny-logo { width: 28px; height: 28px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px; }
+
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }

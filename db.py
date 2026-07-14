@@ -144,6 +144,39 @@ def _init_db_unsafe() -> None:
             );
             create index if not exists scrape_events_run_id_idx on scrape_events(run_id, id);
             create index if not exists scrape_runs_started_idx on scrape_runs(started_at desc);
+
+            create table if not exists companies (
+                id bigserial primary key,
+                name text not null unique,
+                category_1 text, category_2 text, category_3 text,
+                location text, tel text, email text, website text,
+                news_url text, jobs_url text,
+                linkedin_url text, linkedin_industry text,
+                summary text, specialities text,
+                event_source text, event_pitch text, event_profile text,
+                logo_url text, stand text,
+                enrich_status text not null default 'pending',
+                enrich_source text,
+                enriched_at timestamptz,
+                updated_at timestamptz not null default now()
+            );
+            create index if not exists companies_status_idx on companies(enrich_status);
+            create index if not exists companies_name_lower_idx on companies(lower(name));
+
+            create table if not exists company_enrichment_log (
+                id bigserial primary key,
+                company_id bigint not null references companies(id) on delete cascade,
+                attempt_no int,
+                source text,
+                success boolean not null,
+                duration_ms int,
+                credits numeric not null default 0,
+                usd numeric not null default 0,
+                error_message text,
+                details jsonb,
+                searched_at timestamptz not null default now()
+            );
+            create index if not exists company_enrich_log_idx on company_enrichment_log(company_id, id);
             """
         )
     )
@@ -414,3 +447,167 @@ def cumulative_spend() -> dict:
         result = _run(q); _ok(); return result
     except Exception as e:  # noqa: BLE001
         _fail("cumulative_spend", e); return {"credits": 0, "usd": 0}
+
+
+# --------------------------------------------------------------------------- #
+# Companies + enrichment log (Module 01 normalized directory)
+# --------------------------------------------------------------------------- #
+COMPANY_COLS = (
+    "id, name, category_1, category_2, category_3, location, tel, email, "
+    "website, news_url, jobs_url, linkedin_url, linkedin_industry, summary, "
+    "specialities, event_source, event_pitch, event_profile, logo_url, stand, "
+    "enrich_status, enrich_source, enriched_at, updated_at"
+)
+
+# Fields the enrichment cascade may fill in. `event_*` are set at insert time.
+ENRICHABLE_FIELDS = (
+    "location", "tel", "email", "website", "news_url", "jobs_url",
+    "linkedin_url", "linkedin_industry", "summary", "specialities",
+)
+
+
+def upsert_company_from_exhibitor(ex: dict) -> int | None:
+    """Upsert one scraped exhibitor into `companies`. Returns the row id or None
+    on DB failure. Only sets fields we scrape; enrichable fields stay NULL."""
+    if not using_db():
+        # File fallback: keep it simple -- return a synthetic id via hash of name
+        return abs(hash(ex.get("name", "")))
+    cats = ex.get("categories") or []
+    cat1 = cats[0] if len(cats) > 0 else None
+    cat2 = cats[1] if len(cats) > 1 else None
+    cat3 = cats[2] if len(cats) > 2 else None
+
+    def q(cur):
+        cur.execute(
+            """
+            insert into companies
+                (name, category_1, category_2, category_3,
+                 event_source, event_pitch, event_profile, logo_url, stand)
+            values (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            on conflict (name) do update set
+                category_1   = coalesce(excluded.category_1,   companies.category_1),
+                category_2   = coalesce(excluded.category_2,   companies.category_2),
+                category_3   = coalesce(excluded.category_3,   companies.category_3),
+                event_source = coalesce(excluded.event_source, companies.event_source),
+                event_pitch  = coalesce(excluded.event_pitch,  companies.event_pitch),
+                event_profile= coalesce(excluded.event_profile,companies.event_profile),
+                logo_url     = coalesce(excluded.logo_url,     companies.logo_url),
+                stand        = coalesce(excluded.stand,        companies.stand),
+                updated_at   = now()
+            returning id
+            """,
+            (
+                ex.get("name"), cat1, cat2, cat3,
+                ex.get("source_url"), ex.get("tagline"), ex.get("description"),
+                ex.get("logo_url"), ex.get("stand"),
+            ),
+        )
+        return cur.fetchone()[0]
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_company_from_exhibitor", e); return None
+
+
+def list_companies(status: str | None = None, limit: int | None = None) -> list[dict]:
+    if not using_db():
+        return []
+
+    def q(cur):
+        where = "where enrich_status = %s" if status else ""
+        lim = "limit %s" if limit else ""
+        params = tuple(x for x in (status, limit) if x is not None)
+        cur.execute(f"select {COMPANY_COLS} from companies {where} order by name {lim}", params)
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_companies", e); return []
+
+
+def get_company(company_id: int) -> dict | None:
+    if not using_db():
+        return None
+
+    def q(cur):
+        cur.execute(f"select {COMPANY_COLS} from companies where id = %s", (company_id,))
+        rows = _dictify(cur)
+        return rows[0] if rows else None
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_company", e); return None
+
+
+def count_companies_by_status() -> dict:
+    if not using_db():
+        return {"pending": 0, "enriched": 0, "terminal": 0, "total": 0}
+
+    def q(cur):
+        cur.execute(
+            "select enrich_status, count(*) from companies group by enrich_status"
+        )
+        rows = cur.fetchall()
+        d = {r[0]: r[1] for r in rows}
+        d["total"] = sum(d.values())
+        return d
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("count_companies_by_status", e); return {"pending": 0, "enriched": 0, "terminal": 0, "total": 0}
+
+
+def update_company_fields(company_id: int, fields: dict, source: str | None = None,
+                          status: str = "enriched") -> None:
+    """SET only whitelisted fields; also stamp enrich_source/enriched_at/status."""
+    if not using_db():
+        return
+    clean = {k: v for k, v in fields.items() if k in ENRICHABLE_FIELDS and v not in (None, "")}
+    if not clean and source is None and status is None:
+        return
+    sets, params = [], []
+    for k, v in clean.items():
+        sets.append(f"{k} = coalesce(%s, {k})")
+        params.append(v)
+    if source is not None:
+        sets.append("enrich_source = %s")
+        params.append(source)
+    if status is not None:
+        sets.append("enrich_status = %s")
+        params.append(status)
+    sets.append("enriched_at = now()")
+    sets.append("updated_at = now()")
+    params.append(company_id)
+    sql = f"update companies set {', '.join(sets)} where id = %s"
+
+    try:
+        _run(lambda cur: cur.execute(sql, tuple(params)))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("update_company_fields", e)
+
+
+def log_company_enrichment(company_id: int, attempt_no: int, source: str,
+                           success: bool, duration_ms: int | None = None,
+                           credits: float = 0.0, usd: float = 0.0,
+                           error_message: str | None = None,
+                           details: dict | None = None) -> None:
+    if not using_db():
+        return
+    from psycopg2.extras import Json
+    try:
+        _run(lambda cur: cur.execute(
+            """insert into company_enrichment_log
+                   (company_id, attempt_no, source, success, duration_ms,
+                    credits, usd, error_message, details)
+               values (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (company_id, attempt_no, source, success, duration_ms, credits, usd,
+             error_message, Json(details) if details else None),
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("log_company_enrichment", e)

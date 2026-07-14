@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Companies{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>Companies</h1>
+      <p class="muted">
+        Normalised supplier directory (17 columns per row). Categories, event pitch/
+        profile come from the scrape; the other 10 fields are filled by the
+        enrichment cascade — <b>IcyPeas → FullEnrich → AI Ark → Apollo</b>, then a
+        website subpath probe for News/Jobs.
+      </p>
+      <div class="chips">
+        <a class="chip{{ ' chip-active' if not filter_status }}" href="{{ url_for('companies') }}">All <b>{{ counts.get('total',0) }}</b></a>
+        <a class="chip{{ ' chip-active' if filter_status=='pending' }}" href="{{ url_for('companies', status='pending') }}">Pending <b>{{ counts.get('pending',0) }}</b></a>
+        <a class="chip{{ ' chip-active' if filter_status=='enriched' }}" href="{{ url_for('companies', status='enriched') }}">Enriched <b>{{ counts.get('enriched',0) }}</b></a>
+        <a class="chip{{ ' chip-active' if filter_status=='terminal' }}" href="{{ url_for('companies', status='terminal') }}">Terminal <b>{{ counts.get('terminal',0) }}</b></a>
+      </div>
+    </div>
+    <div>
+      <form method="post" action="{{ url_for('companies_normalize') }}" style="display:inline">
+        <button class="btn" type="submit">Backfill / normalize</button>
+      </form>
+      <button class="btn btn-primary" id="enrich-all" type="button">Enrich all pending →</button>
+    </div>
+  </div>
+</section>
+
+{% if not rows %}
+  <section class="panel empty">
+    <p>No companies yet. Click <strong>Backfill / normalize</strong> above to load them from the last exhibitor scrape.</p>
+  </section>
+{% else %}
+<section class="panel companies-wrap">
+  <table class="companies">
+    <thead>
+      <tr>
+        <th></th><th>Company</th><th>Category</th>
+        <th>Location</th><th>Tel</th><th>Email</th>
+        <th>Website</th><th>News</th><th>Jobs</th>
+        <th>LinkedIn</th><th>Industry</th>
+        <th>Summary</th><th>Specialities</th>
+        <th>Event pitch</th><th>Event profile</th>
+        <th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        {% set cats = [r.category_1, r.category_2, r.category_3]|select|list %}
+        <tr class="rs-{{ r.enrich_status }}">
+          <td>{% if r.logo_url %}<img class="tiny-logo" src="{{ r.logo_url }}" alt="" loading="lazy">{% endif %}</td>
+          <td><b>{{ r.name }}</b>{% if r.stand %} <span class="pill">Stand {{ r.stand }}</span>{% endif %}</td>
+          <td>{{ cats|join(' · ') }}</td>
+          <td>{{ r.location or '—' }}</td>
+          <td>{{ r.tel or '—' }}</td>
+          <td>{{ r.email or '—' }}</td>
+          <td>{% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener">site</a>{% else %}—{% endif %}</td>
+          <td>{% if r.news_url %}<a href="{{ r.news_url }}" target="_blank" rel="noopener">news</a>{% else %}—{% endif %}</td>
+          <td>{% if r.jobs_url %}<a href="{{ r.jobs_url }}" target="_blank" rel="noopener">jobs</a>{% else %}—{% endif %}</td>
+          <td>{% if r.linkedin_url %}<a href="{{ r.linkedin_url }}" target="_blank" rel="noopener">in</a>{% else %}—{% endif %}</td>
+          <td>{{ r.linkedin_industry or '—' }}</td>
+          <td class="clip">{{ (r.summary or '—')[:180] }}</td>
+          <td class="clip">{{ (r.specialities or '—')[:140] }}</td>
+          <td class="clip">{{ (r.event_pitch or '—')[:120] }}</td>
+          <td class="clip">{{ (r.event_profile or '—')[:180] }}</td>
+          <td>
+            <span class="run-status rs-{{ r.enrich_status }}">{{ r.enrich_status }}</span>
+            {% if r.enrich_source %}<div class="muted small">{{ r.enrich_source }}</div>{% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('companies_enrich') }}">
+              <input type="hidden" name="id" value="{{ r.id }}">
+              <button class="btn btn-small" type="submit">
+                {{ 'Re-enrich' if r.enrich_status != 'pending' else 'Enrich' }}
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<script>
+  const btn = document.getElementById("enrich-all");
+  if (btn) btn.addEventListener("click", () => {
+    btn.disabled = true;
+    btn.textContent = "Started — opening Logs+Costs…";
+    fetch("{{ url_for('companies_enrich_all') }}?format=json",
+          { method: "POST", keepalive: true }).catch(() => {});
+    setTimeout(() => { window.location.href = "{{ url_for('logs') }}"; }, 400);
+  });
+</script>
+{% endblock %}

@@ -24,6 +24,8 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, url
 
 import costs
 import db
+import normalize
+from enrichers import cascade as enrichment_cascade
 from runlog import RunLogger
 from scrapers import icypeas
 from scrapers.exhibitors import scrape_event_sources
@@ -102,6 +104,13 @@ def scraping_engine_scrape():
         t = perf_counter()
         _save(KEY_EXHIBITORS, result)
         log.event("supabase_write", "saved exhibitors → app_cache",
+                  duration_ms=(perf_counter() - t) * 1000)
+
+        t = perf_counter()
+        norm = normalize.normalize_exhibitors(result)
+        log.event("normalize",
+                  f"upserted {norm['inserted_or_updated']}/{norm['total']} into companies "
+                  f"(skipped {norm['skipped']})",
                   duration_ms=(perf_counter() - t) * 1000)
         db.finish_run(run_id)
         ok = sum(1 for s in result["sources"] if s["status"] == "ok")
@@ -223,6 +232,90 @@ def logs_events():
     run = db.get_run(run_id) if run_id else db.get_latest_run()
     events = db.get_events(run["run_id"], after) if run else []
     return jsonify({"run": run, "events": events, "cumulative": db.cumulative_spend()})
+
+
+@app.route("/companies")
+def companies():
+    status = request.args.get("status")  # 'pending' | 'enriched' | 'terminal' | None
+    return render_template(
+        "companies.html",
+        active="companies",
+        rows=db.list_companies(status=status),
+        counts=db.count_companies_by_status(),
+        filter_status=status,
+    )
+
+
+@app.route("/companies/normalize", methods=["POST"])
+def companies_normalize():
+    run_id = db.create_run("normalize", "Normalize exhibitors → companies")
+    log = RunLogger(run_id)
+    t = perf_counter()
+    result = normalize.normalize_exhibitors()
+    log.event("normalize",
+              f"upserted {result['inserted_or_updated']}/{result['total']} "
+              f"(skipped {result['skipped']})",
+              duration_ms=(perf_counter() - t) * 1000)
+    db.finish_run(run_id)
+    flash(f"Normalized {result['inserted_or_updated']} companies "
+          f"(skipped {result['skipped']}).",
+          "success" if result["inserted_or_updated"] else "error")
+    return redirect(url_for("companies"))
+
+
+@app.route("/companies/enrich", methods=["POST"])
+def companies_enrich():
+    """Enrich a single company (per-row button)."""
+    cid = int(request.form["id"])
+    company = db.get_company(cid)
+    if not company:
+        flash("Company not found.", "error")
+        return redirect(url_for("companies"))
+
+    run_id = db.create_run("enrich_company", f"Enrich · {company['name']}")
+    log = RunLogger(run_id)
+    report = enrichment_cascade.enrich_one(company, logger=log)
+    db.finish_run(run_id)
+
+    if report["filled_fields"]:
+        flash(f"Filled {len(report['filled_fields'])} field(s) for "
+              f"{company['name']} via {'+'.join(report['hit_sources']) or '(none)'} "
+              f"(cost ${report['usd']:.4f}).",
+              "success")
+    else:
+        flash(f"No new data for {company['name']} — marked terminal.", "error")
+    return redirect(url_for("companies"))
+
+
+@app.route("/companies/enrich-all", methods=["POST"])
+def companies_enrich_all():
+    """Bulk-enrich all pending companies server-side; JSON kicks it off and
+    the browser is expected to navigate to /logs to watch it stream."""
+    pending = db.list_companies(status="pending")
+    run_id = db.create_run("enrich_batch",
+                           f"Enrich all pending ({len(pending)} companies)")
+    log = RunLogger(run_id)
+    totals = {"filled": 0, "terminal": 0, "usd": 0.0, "credits": 0.0}
+    for c in pending:
+        report = enrichment_cascade.enrich_one(c, logger=log)
+        totals["usd"] += report["usd"]
+        totals["credits"] += report["credits"]
+        if report["filled_fields"]:
+            totals["filled"] += 1
+        else:
+            totals["terminal"] += 1
+    log.event("run_summary",
+              f"{totals['filled']} enriched, {totals['terminal']} terminal, "
+              f"${totals['usd']:.4f} total",
+              credits=totals["credits"])
+    db.finish_run(run_id)
+
+    if request.args.get("format") == "json":
+        return jsonify({"run_id": run_id, **totals, "processed": len(pending)})
+    flash(f"Enriched {totals['filled']}, terminal {totals['terminal']} "
+          f"(${totals['usd']:.4f}).",
+          "success" if totals["filled"] else "error")
+    return redirect(url_for("companies"))
 
 
 @app.route("/healthz")
