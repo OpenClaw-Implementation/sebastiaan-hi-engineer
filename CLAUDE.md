@@ -24,6 +24,22 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
   (bigserial) is the poll cursor. Run-history rows link to `/logs/<run_id>`
   (`templates/run_detail.html`) for a per-run drill-down: run header, companies
   touched, full event timeline.
+- **Jobs tab** (`/jobs`) + **Articles tab** (`/articles`): normalised listings.
+  Backed by tables `jobs(company_id, title, url, location, source_page,
+  first_seen_at, last_seen_at, …)` + `articles(company_id, title, url,
+  published_at, summary, source_page, first_seen_at, last_seen_at, …)`, both
+  UNIQUE-keyed on `(company_id, url [, title])` with `ON CONFLICT DO UPDATE
+  SET last_seen_at = now()` so re-runs bump seen-timestamps and add new items
+  without duplicating. `companies.jobs_last_scraped_at` /
+  `articles_last_scraped_at` gate batch selection (stale = > 1 h old or NULL).
+- `scrapers/listing_extractor.py`: shared anchor-based heuristic — chrome-
+  stripped, href-hint filtered, deduped by URL. Public `is_noise_title()` used
+  both at extraction and by `clean_noise.py` (one-off delete of pre-filter rows).
+- `scrapers/jobs_pipeline.py` + `scrapers/articles_pipeline.py`: per-company —
+  use `companies.jobs_url` / `news_url` if set, else probe common NL/EN paths
+  and back-fill; fetch canonical page; extract listings; upsert.
+- `bulk_pipeline.py <jobs|articles>`: one-off dyno runner over all eligible
+  companies. Two Heroku Scheduler jobs (dashboard-configured) run these daily.
 - **Stats tab** (`/stats`, `templates/stats.html`): analytics dashboard polling
   `/stats/data?window=24h|7d|30d|all` every 7 s. Shows directory totals, cascade
   by-source aggregates (attempts / hits / rate / avg-ms / credits / $) **with
