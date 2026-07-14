@@ -676,16 +676,16 @@ def cascade_by_source_with_deltas(window: str = "7d") -> list[dict]:
             )
             select c.source, c.attempts, c.hits,
                    case when c.attempts > 0
-                        then round(100.0 * c.hits / c.attempts, 1)::float
+                        then round((100.0 * c.hits / c.attempts)::numeric, 1)::float
                         else 0 end as hit_rate_pct,
                    c.avg_ms, c.credits, c.usd,
                    coalesce(p.attempts, 0)::int as prev_attempts,
                    coalesce(p.usd, 0)::float as prev_usd,
                    case when coalesce(p.attempts, 0) > 0
-                        then round(100.0 * (c.attempts - p.attempts) / p.attempts, 0)::int
+                        then round((100.0 * (c.attempts - p.attempts) / p.attempts)::numeric, 0)::int
                         else null end as delta_attempts_pct,
                    case when coalesce(p.usd, 0) > 0
-                        then round(100.0 * (c.usd - p.usd) / p.usd, 0)::int
+                        then round((100.0 * (c.usd - p.usd) / p.usd)::numeric, 0)::int
                         else null end as delta_usd_pct
               from cur c
               left join prev p on p.source = c.source
