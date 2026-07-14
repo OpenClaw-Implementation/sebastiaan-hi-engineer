@@ -56,8 +56,14 @@ def enrich_company(name: str, hints: dict | None = None) -> dict:
     if not api_key:
         return envelope("icypeas", error="ICYPEAS_API_KEY not set")
 
+    # Bias the query to the Netherlands so multinationals resolve to their NL
+    # presence (fixes e.g. ABB Robotics → Bengaluru because IcyPeas otherwise
+    # returns whichever country has the most indexed employees).
     body = {
-        "query": {"currentCompanyName": {"include": [name]}},
+        "query": {
+            "currentCompanyName": {"include": [name]},
+            "location": {"include": ["Netherlands", "Nederland", "Holland"]},
+        },
         "pagination": {"size": 3},
     }
     try:

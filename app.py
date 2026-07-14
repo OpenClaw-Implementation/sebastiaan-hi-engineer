@@ -289,11 +289,15 @@ def companies_enrich():
 
 @app.route("/companies/enrich-all", methods=["POST"])
 def companies_enrich_all():
-    """Bulk-enrich all pending companies server-side; JSON kicks it off and
-    the browser is expected to navigate to /logs to watch it stream."""
-    pending = db.list_companies(status="pending")
+    """Bulk-enrich pending companies in a chunk. The client's JS loop calls this
+    repeatedly with a small ``?limit`` until ``remaining_pending`` reaches 0 --
+    each request stays well under Heroku's 30s router timeout even at ~10s per
+    company."""
+    limit = max(1, min(int(request.args.get("limit", 10)), 50))
+    pending = db.list_companies(status="pending", limit=limit)
+
     run_id = db.create_run("enrich_batch",
-                           f"Enrich all pending ({len(pending)} companies)")
+                           f"Enrich batch ({len(pending)} of pending)")
     log = RunLogger(run_id)
     totals = {"filled": 0, "terminal": 0, "usd": 0.0, "credits": 0.0}
     for c in pending:
@@ -304,16 +308,23 @@ def companies_enrich_all():
             totals["filled"] += 1
         else:
             totals["terminal"] += 1
-    log.event("run_summary",
+    log.event("batch_summary",
               f"{totals['filled']} enriched, {totals['terminal']} terminal, "
-              f"${totals['usd']:.4f} total",
+              f"${totals['usd']:.4f} in this batch",
               credits=totals["credits"])
     db.finish_run(run_id)
 
+    remaining = db.count_companies_by_status().get("pending", 0)
+
     if request.args.get("format") == "json":
-        return jsonify({"run_id": run_id, **totals, "processed": len(pending)})
-    flash(f"Enriched {totals['filled']}, terminal {totals['terminal']} "
-          f"(${totals['usd']:.4f}).",
+        return jsonify({
+            "run_id": run_id,
+            "processed": len(pending),
+            "remaining_pending": remaining,
+            **totals,
+        })
+    flash(f"Batch: enriched {totals['filled']}, terminal {totals['terminal']} "
+          f"(${totals['usd']:.4f}). Remaining pending: {remaining}.",
           "success" if totals["filled"] else "error")
     return redirect(url_for("companies"))
 

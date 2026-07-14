@@ -24,6 +24,7 @@
         <button class="btn" type="submit">Backfill / normalize</button>
       </form>
       <button class="btn btn-primary" id="enrich-all" type="button">Enrich all pending →</button>
+      <div id="batch-progress" class="muted small" style="margin-top:.4rem"></div>
     </div>
   </div>
 </section>
@@ -85,13 +86,34 @@
 {% endif %}
 
 <script>
+  // Client-side batch loop -- each batch stays under Heroku's 30s router
+  // timeout even if it processes 10 companies at ~10s each. Keeps this tab
+  // alive as the driver; user can open Logs+Costs in a separate tab to watch.
   const btn = document.getElementById("enrich-all");
-  if (btn) btn.addEventListener("click", () => {
+  const prog = document.getElementById("batch-progress");
+  const BATCH = 10;
+  if (btn) btn.addEventListener("click", async () => {
     btn.disabled = true;
-    btn.textContent = "Started — opening Logs+Costs…";
-    fetch("{{ url_for('companies_enrich_all') }}?format=json",
-          { method: "POST", keepalive: true }).catch(() => {});
-    setTimeout(() => { window.location.href = "{{ url_for('logs') }}"; }, 400);
+    let batchNo = 0, filled = 0, terminal = 0, usd = 0;
+    while (true) {
+      batchNo++;
+      prog.textContent = `Batch ${batchNo} of ${BATCH} companies…`;
+      let data;
+      try {
+        const res = await fetch(`{{ url_for('companies_enrich_all') }}?format=json&limit=${BATCH}`,
+                                { method: "POST" });
+        data = await res.json();
+      } catch (e) { prog.textContent = `Network error — retrying in 3 s…`; await new Promise(r=>setTimeout(r,3000)); continue; }
+      filled   += data.filled   || 0;
+      terminal += data.terminal || 0;
+      usd      += data.usd      || 0;
+      prog.textContent =
+        `Batch ${batchNo} done. Running totals: ${filled} enriched, ${terminal} terminal, $${usd.toFixed(4)}. ` +
+        `Remaining pending: ${data.remaining_pending}.`;
+      if (!data.processed || data.remaining_pending === 0) break;
+    }
+    prog.textContent = `All done — ${filled} enriched, ${terminal} terminal, $${usd.toFixed(4)}. Reloading…`;
+    setTimeout(() => window.location.reload(), 1200);
   });
 </script>
 {% endblock %}

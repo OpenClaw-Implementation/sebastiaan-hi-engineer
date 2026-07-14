@@ -96,7 +96,13 @@ def enrich_one(company: dict, logger=None) -> dict:
                 first_hit_source = src
             newly = _merge_missing(collected, env["fields"])
             collected.update(newly)
-            # Stop early if every enrichable field is now filled.
+            # Early-exit: once we have the two anchor fields (website +
+            # linkedin_url), skip the remaining paid legs. Apollo in particular
+            # bills 1 credit per call regardless of outcome, so short-circuiting
+            # after a good IcyPeas hit saves ~$0.05 per company.
+            if collected.get("website") and collected.get("linkedin_url"):
+                break
+            # Also stop if every enrichable field is now filled.
             if all(collected.get(k) for k in db.ENRICHABLE_FIELDS):
                 break
 
