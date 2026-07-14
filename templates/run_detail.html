@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Run · {{ run.label if run else 'unknown' }}{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <a class="muted small" href="{{ url_for('stats') }}">← back to stats</a> ·
+  <a class="muted small" href="{{ url_for('logs') }}">latest run</a>
+  {% if run %}
+    <div class="panel-head">
+      <div>
+        <h1>{{ run.label }}</h1>
+        <p class="muted">
+          <span class="tag">{{ run.kind }}</span> ·
+          started {{ (run.started_at or '')[:19]|replace('T',' ') }} UTC ·
+          {% if run.finished_at %}finished {{ (run.finished_at or '')[:19]|replace('T',' ') }} UTC{% else %}still running{% endif %} ·
+          run_id <code>{{ run.run_id }}</code>
+        </p>
+      </div>
+      <div>
+        <span class="run-status rs-{{ run.status }}">{{ run.status }}</span>
+        <div class="muted small" style="margin-top:.3rem">
+          <b>{{ '%.4f'|format(run.total_credits or 0) }}</b> credits ·
+          <b>${{ '%.4f'|format(run.total_usd or 0) }}</b>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">Run not found.</p>
+  {% endif %}
+</section>
+
+{% if run %}
+  {% if companies %}
+    <section class="panel">
+      <h2>Companies touched by this run <span class="muted small">({{ companies|length }})</span></h2>
+      <table class="events">
+        <thead>
+          <tr><th>Company</th><th>Status</th><th>Source</th><th class="r">Attempts</th><th class="r">Hits</th><th class="r">Credits</th><th class="r">USD</th></tr>
+        </thead>
+        <tbody>
+          {% for c in companies %}
+            <tr>
+              <td><b>{{ c.name }}</b></td>
+              <td><span class="run-status rs-{{ c.enrich_status }}">{{ c.enrich_status }}</span></td>
+              <td>{{ c.enrich_source or '—' }}</td>
+              <td class="r mono">{{ c.attempts }}</td>
+              <td class="r mono">{{ c.hits }}</td>
+              <td class="r mono">{{ '%.4f'|format(c.credits or 0) }}</td>
+              <td class="r mono">${{ '%.4f'|format(c.usd or 0) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+
+  <section class="panel">
+    <h2>Event timeline <span class="muted small">({{ events|length }} events)</span></h2>
+    <table class="events">
+      <thead>
+        <tr><th>#</th><th>ts (UTC)</th><th>Action</th><th>Detail</th><th class="r">Duration</th><th class="r">Credits</th><th class="r">USD</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+          <tr class="{{ 'ev-error' if e.status == 'error' }}">
+            <td class="muted">{{ loop.index }}</td>
+            <td class="mono">{{ (e.ts or '')[11:19] }}</td>
+            <td><span class="tag">{{ e.action }}</span></td>
+            <td>{{ e.detail or '' }}</td>
+            <td class="r mono">{% if e.duration_ms is not none %}{% if e.duration_ms < 1000 %}{{ e.duration_ms }} ms{% else %}{{ '%.1f'|format(e.duration_ms/1000) }} s{% endif %}{% endif %}</td>
+            <td class="r mono">{{ '%.4f'|format(e.credits or 0) if e.credits else '—' }}</td>
+            <td class="r mono">{{ '$%.4f'|format(e.usd or 0) if e.usd else '$0.00' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="muted">No events for this run.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endif %}
+{% endblock %}

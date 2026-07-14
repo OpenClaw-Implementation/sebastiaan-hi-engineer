@@ -170,5 +170,17 @@ table.companies tr.rs-enriched td { background: rgba(43,212,167,.03); }
 table.companies tr.rs-terminal td { color: var(--muted); }
 img.tiny-logo { width: 28px; height: 28px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px; }
 
+/* --- Stats tab --- */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+table.fillrates { width: 100%; border-collapse: collapse; font-size: .85rem; }
+table.fillrates td { padding: .35rem .55rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.fillrates td.fr-name { width: 160px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+table.fillrates td.fr-pct { width: 60px; text-align: right; }
+.bar { height: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; position: relative; }
+.bar::after { content: ""; position: absolute; inset: 0; width: var(--pct, 0%); background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .3s ease; }
+table.runs a { color: var(--accent); text-decoration: none; }
+table.runs a:hover { text-decoration: underline; }
+
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }

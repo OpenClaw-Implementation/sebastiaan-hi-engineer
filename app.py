@@ -329,6 +329,54 @@ def companies_enrich_all():
     return redirect(url_for("companies"))
 
 
+def _gather_stats(window: str) -> dict:
+    counts = db.count_companies_by_status()
+    return {
+        "window": window,
+        "directory": {
+            "total": counts.get("total", 0),
+            "pending": counts.get("pending", 0),
+            "enriched": counts.get("enriched", 0),
+            "terminal": counts.get("terminal", 0),
+            "cumulative": db.cumulative_spend(),
+        },
+        "cascade": db.cascade_by_source(window),
+        "fill_rates": db.field_fill_rates(),
+        "sources": db.source_distribution(),
+        "top_industries": db.top_industries(15),
+        "top_locations": db.top_locations(15),
+        "top_categories": db.top_categories(15),
+        "runs": db.get_runs(limit=20),
+        "daily_cost": db.daily_cost(14),
+    }
+
+
+@app.route("/stats")
+def stats():
+    window = request.args.get("window", "7d")
+    if window not in ("24h", "7d", "30d", "all"):
+        window = "7d"
+    return render_template(
+        "stats.html",
+        active="stats",
+        stats=_gather_stats(window),
+    )
+
+
+@app.route("/stats/data")
+def stats_data():
+    window = request.args.get("window", "7d")
+    if window not in ("24h", "7d", "30d", "all"):
+        window = "7d"
+    return jsonify(_gather_stats(window))
+
+
+@app.route("/logs/<run_id>")
+def run_detail_view(run_id):
+    data = db.run_detail(run_id)
+    return render_template("run_detail.html", active="logs", **data)
+
+
 @app.route("/healthz")
 def healthz():
     return {"status": "ok"}

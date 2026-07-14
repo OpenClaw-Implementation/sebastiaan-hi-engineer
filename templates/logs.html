@@ -47,7 +47,7 @@
         <tr>
           <td class="mono">{{ (r.started_at or '')[:16]|replace('T',' ') }}</td>
           <td><span class="tag">{{ r.kind }}</span></td>
-          <td>{{ r.label }}</td>
+          <td><a href="{{ url_for('run_detail_view', run_id=r.run_id) }}">{{ r.label }}</a></td>
           <td><span class="run-status rs-{{ r.status }}">{{ r.status }}</span></td>
           <td class="r">{{ '%.2f'|format(r.total_credits or 0) }}</td>
           <td class="r">${{ '%.4f'|format(r.total_usd or 0) }}</td>

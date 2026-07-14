@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Stats{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>Stats</h1>
+      <p class="muted">
+        Cascade performance, cost per leg, and directory analytics. Auto-refreshes
+        every 7 s. Windowed views apply to the cascade + daily-cost sections;
+        directory / fill-rate / top-N are all-time.
+      </p>
+    </div>
+    <div class="chips" id="window-chips">
+      {% for w, lbl in [('24h','24 h'), ('7d','7 d'), ('30d','30 d'), ('all','All')] %}
+        <a class="chip {{ 'chip-active' if stats.window == w }}" href="{{ url_for('stats', window=w) }}" data-window="{{ w }}">{{ lbl }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Directory</h2>
+  <div class="stats" id="dir-stats">
+    <div class="stat"><span class="num" id="dir-total">{{ stats.directory.total }}</span><span class="lbl">total companies</span></div>
+    <div class="stat"><span class="num" id="dir-enriched">{{ stats.directory.enriched }}</span><span class="lbl">enriched</span></div>
+    <div class="stat"><span class="num" id="dir-pending">{{ stats.directory.pending }}</span><span class="lbl">pending</span></div>
+    <div class="stat"><span class="num" id="dir-terminal">{{ stats.directory.terminal }}</span><span class="lbl">terminal</span></div>
+    <div class="stat"><span class="num" id="dir-usd">${{ '%.4f'|format(stats.directory.cumulative.usd) }}</span><span class="lbl">total spend</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Cascade — attempts, hits, cost per leg <span class="muted small">(window: <span id="cascade-window">{{ stats.window }}</span>)</span></h2>
+  <table class="events" id="cascade-table">
+    <thead>
+      <tr><th>Source</th><th class="r">Attempts</th><th class="r">Hits</th><th class="r">Hit rate</th><th class="r">Avg</th><th class="r">Credits</th><th class="r">USD</th></tr>
+    </thead>
+    <tbody>
+      {% for r in stats.cascade %}
+        <tr><td><span class="tag">{{ r.source }}</span></td>
+          <td class="r mono">{{ r.attempts }}</td>
+          <td class="r mono">{{ r.hits }}</td>
+          <td class="r mono">{{ '%.1f'|format(r.hit_rate_pct) }}%</td>
+          <td class="r mono">{{ r.avg_ms }} ms</td>
+          <td class="r mono">{{ '%.4f'|format(r.credits) }}</td>
+          <td class="r mono">${{ '%.4f'|format(r.usd) }}</td></tr>
+      {% else %}
+        <tr><td colspan="7" class="muted">No enrichment attempts in this window.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Field fill rates <span class="muted small">({{ stats.fill_rates.total }} companies)</span></h2>
+  <table class="fillrates" id="fillrate-table">
+    {% for f in ['website','linkedin_url','linkedin_industry','location','summary','specialities','tel','email','news_url','jobs_url'] %}
+      {% set pct = stats.fill_rates.get(f, 0) or 0 %}
+      <tr>
+        <td class="fr-name">{{ f }}</td>
+        <td class="fr-bar"><div class="bar" style="--pct:{{ pct }}%"></div></td>
+        <td class="fr-pct mono">{{ '%.1f'|format(pct) }}%</td>
+      </tr>
+    {% endfor %}
+  </table>
+</section>
+
+<div class="two-col">
+  <section class="panel">
+    <h2>Top industries</h2>
+    <table class="events" id="tbl-industries"><tbody>
+      {% for r in stats.top_industries %}
+        <tr><td>{{ r.name }}</td><td class="r mono">{{ r.count }}</td></tr>
+      {% else %}<tr><td class="muted" colspan="2">—</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel">
+    <h2>Top locations</h2>
+    <table class="events" id="tbl-locations"><tbody>
+      {% for r in stats.top_locations %}
+        <tr><td>{{ r.name }}</td><td class="r mono">{{ r.count }}</td></tr>
+      {% else %}<tr><td class="muted" colspan="2">—</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
+
+<div class="two-col">
+  <section class="panel">
+    <h2>Top categories <span class="muted small">(union of category_1..3)</span></h2>
+    <table class="events" id="tbl-categories"><tbody>
+      {% for r in stats.top_categories %}
+        <tr><td>{{ r.name }}</td><td class="r mono">{{ r.count }}</td></tr>
+      {% else %}<tr><td class="muted" colspan="2">—</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel">
+    <h2>Source distribution</h2>
+    <table class="events" id="tbl-sources"><tbody>
+      {% for r in stats.sources %}
+        <tr><td><span class="tag">{{ r.source }}</span></td><td class="r mono">{{ r.count }}</td></tr>
+      {% else %}<tr><td class="muted" colspan="2">—</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>Daily cost <span class="muted small">(last 14 days)</span></h2>
+  <table class="events" id="tbl-daily">
+    <thead><tr><th>Day</th><th class="r">Runs</th><th class="r">Credits</th><th class="r">USD</th></tr></thead>
+    <tbody>
+      {% for r in stats.daily_cost %}
+        <tr><td class="mono">{{ r.day }}</td>
+          <td class="r mono">{{ r.runs }}</td>
+          <td class="r mono">{{ '%.2f'|format(r.credits) }}</td>
+          <td class="r mono">${{ '%.4f'|format(r.usd) }}</td></tr>
+      {% else %}<tr><td class="muted" colspan="4">—</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Recent runs <span class="muted small">(click to drill down)</span></h2>
+  <table class="runs" id="tbl-runs">
+    <thead><tr><th>Started (UTC)</th><th>Kind</th><th>Run</th><th>Status</th><th class="r">Credits</th><th class="r">USD</th></tr></thead>
+    <tbody>
+      {% for r in stats.runs %}
+        <tr>
+          <td class="mono">{{ (r.started_at or '')[:16]|replace('T',' ') }}</td>
+          <td><span class="tag">{{ r.kind }}</span></td>
+          <td><a href="{{ url_for('run_detail_view', run_id=r.run_id) }}">{{ r.label }}</a></td>
+          <td><span class="run-status rs-{{ r.status }}">{{ r.status }}</span></td>
+          <td class="r mono">{{ '%.2f'|format(r.total_credits or 0) }}</td>
+          <td class="r mono">${{ '%.4f'|format(r.total_usd or 0) }}</td>
+        </tr>
+      {% else %}<tr><td class="muted" colspan="6">No runs yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+  // Auto-refresh: re-fetch /stats/data every 7 s and repaint in place.
+  const $ = (id) => document.getElementById(id);
+  const activeWindow = () => document.querySelector('.chip-active')?.dataset?.window || '7d';
+  function fmtUsd(v) { return '$' + (v || 0).toFixed(4); }
+  function paintList(id, rows, name, count) {
+    const tb = $(id).querySelector('tbody');
+    tb.innerHTML = rows.length
+      ? rows.map(r => `<tr><td>${name(r)}</td><td class="r mono">${count(r)}</td></tr>`).join('')
+      : '<tr><td class="muted" colspan="2">—</td></tr>';
+  }
+  async function poll() {
+    try {
+      const w = activeWindow();
+      const res = await fetch(`/stats/data?window=${w}`);
+      const s = await res.json();
+      // Directory
+      $('dir-total').textContent    = s.directory.total;
+      $('dir-enriched').textContent = s.directory.enriched;
+      $('dir-pending').textContent  = s.directory.pending;
+      $('dir-terminal').textContent = s.directory.terminal;
+      $('dir-usd').textContent      = fmtUsd(s.directory.cumulative.usd);
+      // Cascade
+      $('cascade-window').textContent = s.window;
+      const tb = $('cascade-table').querySelector('tbody');
+      tb.innerHTML = s.cascade.length ? s.cascade.map(r => `
+        <tr><td><span class="tag">${r.source}</span></td>
+          <td class="r mono">${r.attempts}</td>
+          <td class="r mono">${r.hits}</td>
+          <td class="r mono">${(r.hit_rate_pct||0).toFixed(1)}%</td>
+          <td class="r mono">${r.avg_ms} ms</td>
+          <td class="r mono">${(r.credits||0).toFixed(4)}</td>
+          <td class="r mono">${fmtUsd(r.usd)}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">No enrichment attempts in this window.</td></tr>';
+      // Fill rates: update bar widths + labels in place
+      const fields = ['website','linkedin_url','linkedin_industry','location','summary','specialities','tel','email','news_url','jobs_url'];
+      const rows = $('fillrate-table').rows;
+      fields.forEach((f, i) => {
+        const pct = s.fill_rates[f] || 0;
+        rows[i].querySelector('.bar').style.setProperty('--pct', pct + '%');
+        rows[i].querySelector('.fr-pct').textContent = pct.toFixed(1) + '%';
+      });
+      paintList('tbl-industries', s.top_industries, r => r.name, r => r.count);
+      paintList('tbl-locations',  s.top_locations,  r => r.name, r => r.count);
+      paintList('tbl-categories', s.top_categories, r => r.name, r => r.count);
+      paintList('tbl-sources',    s.sources, r => `<span class="tag">${r.source}</span>`, r => r.count);
+    } catch (e) { /* silent — next tick will retry */ }
+    setTimeout(poll, 7000);
+  }
+  setTimeout(poll, 7000);
+</script>
+
+{% endblock %}

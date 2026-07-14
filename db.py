@@ -620,3 +620,219 @@ def log_company_enrichment(company_id: int, attempt_no: int, source: str,
         _ok()
     except Exception as e:  # noqa: BLE001
         _fail("log_company_enrichment", e)
+
+
+# --------------------------------------------------------------------------- #
+# Stats aggregations (Analytics tab, /stats)
+# --------------------------------------------------------------------------- #
+_WINDOWS = {"24h": "1 day", "7d": "7 days", "30d": "30 days"}
+
+
+def _window_where(window: str, col: str) -> str:
+    """Build a WHERE clause fragment for a time window. Unknown → no filter."""
+    interval = _WINDOWS.get(window)
+    return f"where {col} > now() - interval '{interval}'" if interval else ""
+
+
+def cascade_by_source(window: str = "7d") -> list[dict]:
+    """Per-provider aggregates from company_enrichment_log."""
+    if not using_db():
+        return []
+    where = _window_where(window, "searched_at")
+
+    def q(cur):
+        cur.execute(f"""
+            select source,
+                   count(*)::int as attempts,
+                   sum(success::int)::int as hits,
+                   case when count(*) > 0
+                        then round(100.0 * sum(success::int) / count(*), 1)::float
+                        else 0 end as hit_rate_pct,
+                   coalesce(avg(duration_ms), 0)::int as avg_ms,
+                   round(sum(credits)::numeric, 4)::float as credits,
+                   round(sum(usd)::numeric, 6)::float as usd
+              from company_enrichment_log {where}
+              group by source
+              order by attempts desc
+        """)
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("cascade_by_source", e); return []
+
+
+def field_fill_rates() -> dict:
+    """Percentage of companies with each enrichable column populated."""
+    if not using_db():
+        return {"total": 0}
+
+    def q(cur):
+        cur.execute("""
+            select
+              count(*)::int as total,
+              round(100.0 * sum((website          is not null)::int) / nullif(count(*),0), 1)::float as website,
+              round(100.0 * sum((linkedin_url     is not null)::int) / nullif(count(*),0), 1)::float as linkedin_url,
+              round(100.0 * sum((linkedin_industry is not null)::int) / nullif(count(*),0), 1)::float as linkedin_industry,
+              round(100.0 * sum((location         is not null)::int) / nullif(count(*),0), 1)::float as location,
+              round(100.0 * sum((summary          is not null)::int) / nullif(count(*),0), 1)::float as summary,
+              round(100.0 * sum((specialities     is not null)::int) / nullif(count(*),0), 1)::float as specialities,
+              round(100.0 * sum((tel              is not null)::int) / nullif(count(*),0), 1)::float as tel,
+              round(100.0 * sum((email            is not null)::int) / nullif(count(*),0), 1)::float as email,
+              round(100.0 * sum((news_url         is not null)::int) / nullif(count(*),0), 1)::float as news_url,
+              round(100.0 * sum((jobs_url         is not null)::int) / nullif(count(*),0), 1)::float as jobs_url
+            from companies
+        """)
+        rows = _dictify(cur)
+        return rows[0] if rows else {"total": 0}
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("field_fill_rates", e); return {"total": 0}
+
+
+def _top_of(sql: str, limit: int) -> list[dict]:
+    def q(cur):
+        cur.execute(sql, (limit,))
+        return _dictify(cur)
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("top_of", e); return []
+
+
+def top_industries(limit: int = 15) -> list[dict]:
+    if not using_db():
+        return []
+    return _top_of(
+        """select linkedin_industry as name, count(*)::int as count
+             from companies where linkedin_industry is not null
+             group by 1 order by 2 desc limit %s""",
+        limit,
+    )
+
+
+def top_locations(limit: int = 15) -> list[dict]:
+    """City-level: first token before the comma."""
+    if not using_db():
+        return []
+    return _top_of(
+        """select trim(split_part(location, ',', 1)) as name, count(*)::int as count
+             from companies where location is not null
+             group by 1 order by 2 desc limit %s""",
+        limit,
+    )
+
+
+def top_categories(limit: int = 15) -> list[dict]:
+    """Union across category_1/2/3."""
+    if not using_db():
+        return []
+    return _top_of(
+        """with cats as (
+              select category_1 as c from companies where category_1 is not null
+              union all select category_2 from companies where category_2 is not null
+              union all select category_3 from companies where category_3 is not null
+           )
+           select c as name, count(*)::int as count from cats
+            group by 1 order by 2 desc limit %s""",
+        limit,
+    )
+
+
+def source_distribution() -> list[dict]:
+    if not using_db():
+        return []
+
+    def q(cur):
+        cur.execute("""
+            select coalesce(enrich_source, '(pending/terminal)') as source,
+                   count(*)::int as count
+              from companies
+              group by 1 order by 2 desc
+        """)
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("source_distribution", e); return []
+
+
+def daily_cost(days: int = 14) -> list[dict]:
+    """Cost & run counts by day for the last N days."""
+    if not using_db():
+        return []
+    days = max(1, int(days))
+
+    def q(cur):
+        cur.execute(f"""
+            select to_char(date(started_at), 'YYYY-MM-DD') as day,
+                   count(*)::int as runs,
+                   round(coalesce(sum(total_usd), 0)::numeric, 4)::float as usd,
+                   round(coalesce(sum(total_credits), 0)::numeric, 4)::float as credits
+              from scrape_runs
+              where started_at > now() - interval '{days} days'
+              group by 1 order by 1
+        """)
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("daily_cost", e); return []
+
+
+def run_detail(run_id: str) -> dict:
+    """Full drill-down for /logs/<run_id>: header + events + touched companies."""
+    empty = {"run": None, "events": [], "companies": []}
+    if not using_db():
+        return empty
+
+    def q(cur):
+        cur.execute(f"select {_RUN_COLS} from scrape_runs where run_id = %s", (run_id,))
+        rows = _dictify(cur)
+        if not rows:
+            return empty
+        run = rows[0]
+
+        cur.execute(
+            """select id, ts, action, detail, status, duration_ms, credits, usd
+                 from scrape_events where run_id = %s order by id""",
+            (run_id,),
+        )
+        events = _dictify(cur)
+
+        companies: list[dict] = []
+        if run["kind"] in ("enrich_company", "enrich_bulk_all", "enrich_batch"):
+            # company_enrichment_log has no run_id column, so associate via time
+            # window overlap with the run's [started_at, finished_at] range
+            # (small buffers so boundary rows still land in the right run).
+            cur.execute(
+                """
+                select c.id, c.name, c.enrich_status, c.enrich_source,
+                       count(l.id)::int as attempts,
+                       sum(l.success::int)::int as hits,
+                       round(sum(l.credits)::numeric, 4)::float as credits,
+                       round(sum(l.usd)::numeric, 6)::float as usd,
+                       min(l.searched_at) as first_ts
+                  from company_enrichment_log l
+                  join companies c on c.id = l.company_id
+                 where l.searched_at between (%s::timestamptz - interval '2 seconds')
+                                         and (coalesce(%s::timestamptz, now())
+                                              + interval '2 seconds')
+                 group by c.id, c.name, c.enrich_status, c.enrich_source
+                 order by first_ts
+                """,
+                (run["started_at"], run["finished_at"]),
+            )
+            companies = _dictify(cur)
+
+        return {"run": run, "events": events, "companies": companies}
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("run_detail", e); return empty
