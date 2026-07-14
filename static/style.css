@@ -186,5 +186,24 @@ table.runs a:hover { text-decoration: underline; }
 .delta-down { color: var(--accent-2); background: rgba(43,212,167,.14); }
 svg.spark { vertical-align: middle; margin-left: .6rem; opacity: .9; }
 
+/* --- Auth / login --- */
+.topbar { justify-content: space-between; }
+.user-chip { display: flex; align-items: center; gap: .5rem; padding: 0 1rem; }
+.login-card { max-width: 420px; margin: 4rem auto; }
+.login-card .field { display: block; margin: 1rem 0; }
+.login-card .field span { display: block; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .35rem; }
+.login-card input[type=email], .login-card input[type=password] {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  color: var(--text);
+  font: inherit;
+  font-size: .95rem;
+}
+.login-card input:focus { outline: none; border-color: var(--accent); }
+.login-card .btn { margin-top: .5rem; width: 100%; }
+
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }

@@ -18,6 +18,14 @@
       <a class="tab {{ 'active' if active == 'stats' }}" href="{{ url_for('stats') }}">Stats</a>
       <a class="tab {{ 'active' if active == 'logs' }}" href="{{ url_for('logs') }}">Logs+Costs</a>
     </nav>
+    {% if current_user %}
+      <div class="user-chip">
+        <span class="muted small">{{ current_user.email }}</span>
+        <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+          <button class="btn btn-small" type="submit">Log out</button>
+        </form>
+      </div>
+    {% endif %}
   </header>
 
   <main class="container">

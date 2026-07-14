@@ -225,6 +225,14 @@ def _init_db_unsafe() -> None:
             );
             create index if not exists articles_company_idx on articles(company_id);
             create index if not exists articles_first_seen_idx on articles(first_seen_at desc);
+
+            create table if not exists users (
+                email text primary key,
+                password_hash text not null,
+                is_admin boolean not null default true,
+                created_at timestamptz not null default now(),
+                last_login_at timestamptz
+            );
             """
         )
     )
@@ -1192,3 +1200,76 @@ def pipeline_summary(kind: str) -> dict:
         result = _run(q); _ok(); return result
     except Exception as e:  # noqa: BLE001
         _fail("pipeline_summary", e); return empty
+
+
+# --------------------------------------------------------------------------- #
+# Users (auth)
+# --------------------------------------------------------------------------- #
+def get_user(email: str) -> dict | None:
+    if not using_db() or not email:
+        return None
+
+    def q(cur):
+        cur.execute(
+            "select email, password_hash, is_admin, created_at, last_login_at "
+            "from users where email = %s",
+            (email.strip().lower(),),
+        )
+        rows = _dictify(cur)
+        return rows[0] if rows else None
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("get_user", e); return None
+
+
+def upsert_user(email: str, password_hash: str, is_admin: bool = True) -> None:
+    if not using_db():
+        return
+    email = email.strip().lower()
+
+    def q(cur):
+        cur.execute(
+            """insert into users (email, password_hash, is_admin)
+               values (%s, %s, %s)
+               on conflict (email) do update set
+                   password_hash = excluded.password_hash,
+                   is_admin      = excluded.is_admin""",
+            (email, password_hash, is_admin),
+        )
+
+    try:
+        _run(q); _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_user", e)
+
+
+def record_login(email: str) -> None:
+    if not using_db() or not email:
+        return
+    try:
+        _run(lambda cur: cur.execute(
+            "update users set last_login_at = now() where email = %s",
+            (email.strip().lower(),),
+        ))
+        _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("record_login", e)
+
+
+def list_users() -> list[dict]:
+    if not using_db():
+        return []
+
+    def q(cur):
+        cur.execute(
+            "select email, is_admin, created_at, last_login_at "
+            "from users order by email"
+        )
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_users", e); return []

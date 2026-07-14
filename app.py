@@ -17,11 +17,13 @@ across dyno restarts), falling back to local JSON files otherwise.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
+import auth
 import costs
 import db
 import normalize
@@ -35,13 +37,61 @@ from scrapers.sources import EVENT_SOURCES, MEDIA_SOURCES, dedupe_keep_order
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "hi-engineer-dev-secret")
 
+# Trust Heroku's X-Forwarded-* headers so url_for() etc. see https.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Session cookie: 12 h idle, HttpOnly always, Secure only on Heroku (local dev
+# runs on http). SameSite Lax so forms from the same origin keep working.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=12)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(os.environ.get("DYNO"))
+
 db.init_db()
+
+# Global auth guard — redirects unauth HTML requests to /login, returns 401
+# JSON for the polling endpoints.
+app.before_request(auth.before_request_guard)
 
 
 @app.context_processor
 def _inject_db_health():
-    """Expose the DB health flag to every template (drives the unavailable banner)."""
-    return {"db_healthy": db.is_healthy()}
+    """Expose the DB health flag and current user to every template."""
+    return {"db_healthy": db.is_healthy(), "current_user": auth.current_user()}
+
+
+# --------------------------------------------------------------------------- #
+# Login / logout
+# --------------------------------------------------------------------------- #
+def _safe_next(target: str | None) -> str:
+    """Only allow same-origin relative next targets."""
+    if target and target.startswith("/") and not target.startswith("//"):
+        return target
+    return url_for("scraping_engine")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    next_url = request.values.get("next") or ""
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+        user = db.get_user(email)
+        if user and auth.verify_password(password, user["password_hash"]):
+            session.clear()
+            session["user_email"] = email
+            session.permanent = True
+            db.record_login(email)
+            return redirect(_safe_next(next_url))
+        error = "Invalid email or password."
+    return render_template("login.html", error=error, next=next_url)
+
+
+@app.route("/logout", methods=["GET", "POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 # Cache keys in the app_cache table (or <key>.json in the file fallback).
 KEY_EXHIBITORS = "exhibitors"

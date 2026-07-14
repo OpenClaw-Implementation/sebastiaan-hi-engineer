@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="panel login-card">
+  <h1>Log in</h1>
+  <p class="muted small">Admin access required.</p>
+  {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('login') }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field">
+      <span>Email</span>
+      <input type="email" name="email" autocomplete="username"
+             required autofocus spellcheck="false">
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn btn-primary" type="submit">Log in</button>
+  </form>
+</section>
+{% endblock %}
