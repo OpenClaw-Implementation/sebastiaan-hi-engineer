@@ -31,12 +31,14 @@ DEFAULT_SOURCES = [
      "Pumps & Valves Rotterdam 2027 (Easyfairs)", "easyfairs"),
     ("https://www.solidsrotterdam.nl/exhibitors/?stands%5BrefinementList%5D%5BeventName%5D%5B0%5D=Solids%20Rotterdam%202027",
      "Solids Rotterdam 2027 (Easyfairs)", "easyfairs"),
-    # Known unsupported (JS-only or auth-gated) — kept in the table so the UI
-    # shows them with an explanatory error rather than pretending they don't exist.
+    # Firecrawl-rendered: SPA whose exhibitor list only appears after JS.
+    # Verified working during Firecrawl probe (Nuxt DOM with <a class="exhibitor">).
+    ("https://www.provada.nl/bezoekers/standhouders",
+     "Provada", "firecrawl"),
+    # Known unsupported (JS-only + no accessible DOM even after render, OR auth-gated).
+    # Kept in the table so the UI shows them with an explanatory error.
     ("https://www.vakbeursenergie.nl/nl/exposantenlijst/",
      "Vakbeurs Energie", "unsupported"),
-    ("https://www.provada.nl/bezoekers/standhouders",
-     "Provada", "unsupported"),
     ("https://www.linkedin.com/school/mikrocentrum/people/",
      "Mikrocentrum (LinkedIn)", "unsupported"),
 ]

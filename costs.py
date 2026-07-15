@@ -31,6 +31,9 @@ _CREDIT_RULES: dict[str, tuple[str, float]] = {
     "ai_ark_company": ("results", 0.0),         # free tier / X-TOKEN plan
     "apollo_organization": ("calls", 1.0),      # 1 credit/call; $/credit varies by plan
     "site_probe": ("calls", 0.0),               # free direct HTTP
+    # Firecrawl: 1 credit per successful scrape. Free tier ~500 credits / signup;
+    # paid Hobby $16/mo ≈ 5000/mo → ~$0.003/credit at that tier.
+    "firecrawl_fetch": ("calls", 1.0),
 }
 
 

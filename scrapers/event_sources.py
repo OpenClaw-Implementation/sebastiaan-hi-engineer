@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 
 from runlog import NULL
 
+from . import firecrawl as firecrawl_client
 from .exhibitors import parse_exhibitors_html
 from .fetcher import DEFAULT_TIMEOUT, USER_AGENT, fetch_html
 
@@ -62,6 +63,11 @@ def scrape_source(source: dict, logger=NULL) -> dict:
             result["exhibitors"] = _foodtech(url, logger)
         elif parser in ("easyfairs", "algolia"):  # keep old name for back-compat
             result["exhibitors"] = _easyfairs(url, logger)
+        elif parser == "firecrawl":
+            exhibitors, credits = _firecrawl(url, source.get("meta") or {}, logger)
+            result["exhibitors"] = exhibitors
+            if credits:
+                result["meta_update"] = {"last_credits_charged": credits}
         elif parser == "safetyevent":  # kept for future re-enablement; today: unsupported
             result["exhibitors"] = _safetyevent(url, logger)
         elif parser == "unsupported":
@@ -217,3 +223,149 @@ def _easyfairs(url: str, logger) -> list[dict]:
                  f"easyfairs SSR anchors: {len(out)} exhibitors "
                  f"(skipped {skipped_lang} language-switcher hrefs)")
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Parser: firecrawl  (JS-rendered pages via Firecrawl API)
+# --------------------------------------------------------------------------- #
+# For sites whose exhibitor list is only visible after JS runs. Fetches the
+# rendered HTML via Firecrawl, then tries a battery of extractors (Provada
+# `<a class="exhibitor">`, foodtech card-introduce, easyfairs URL-slug,
+# safety-event custom-logo, generic anchor) and returns whichever yields the
+# most results. `meta.strategy` can pin a specific extractor to skip auto-detect.
+
+def _provada_extractor(html: str, source_url: str) -> list[dict]:
+    """Provada: `<a class="exhibitor">` with nested `.premium` div + name + `.stand`."""
+    soup = BeautifulSoup(html, "html.parser")
+    out: list[dict] = []
+    for a in soup.find_all("a", class_="exhibitor"):
+        text = _clean(a.get_text(" "))
+        stand = ""
+        stand_el = a.find(class_="stand")
+        if stand_el:
+            stand = _clean(stand_el.get_text()).replace("Stand ", "")
+        # Company name = link text minus 'premium' prefix minus 'Stand N.NN' suffix
+        name = re.sub(r"^premium\s*", "", text, flags=re.I)
+        name = re.sub(r"\s*Stand\s+[\d.]+\s*$", "", name).strip()
+        if not name or len(name) < 2:
+            continue
+        href = a.get("href") or ""
+        out.append({
+            "name": name, "tagline": "", "stand": stand,
+            "categories": [], "logo_url": "", "description": "",
+            "source_url": urljoin(source_url, href) if href else source_url,
+        })
+    return out
+
+
+def _safetyevent_after_render_extractor(html: str, source_url: str) -> list[dict]:
+    """Safety Event: after JS render, partner logos become `<img class="custom-logo">`
+    but skip the site's own header logo (alt text contains 'SafetyEvent')."""
+    soup = BeautifulSoup(html, "html.parser")
+    out: list[dict] = []
+    seen: set[str] = set()
+    for img in soup.find_all("img"):
+        classes = " ".join(img.get("class") or [])
+        alt = _clean(img.get("alt", ""))
+        if "custom-logo" not in classes:
+            continue
+        if not alt or len(alt) < 3:
+            continue
+        if "safetyevent" in alt.lower() or alt.lower().startswith("logo van"):
+            continue
+        key = alt.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({
+            "name": alt, "tagline": "", "stand": "",
+            "categories": [], "logo_url": img.get("src") or img.get("data-src") or "",
+            "description": "", "source_url": source_url,
+        })
+    return out
+
+
+def _generic_anchor_extractor(html: str, source_url: str) -> list[dict]:
+    """Very generic: any anchor whose href contains /exposant|/exhibitor|/standhouder|/partner/."""
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "header", "footer", "nav"]):
+        tag.decompose()
+    out: list[dict] = []
+    seen: set[str] = set()
+    for a in soup.find_all("a", href=True):
+        low = a["href"].lower()
+        if not any(k in low for k in ("/exposant", "/exhibitor", "/standhouder", "/partner", "/deelnemer")):
+            continue
+        text = _clean(a.get_text())
+        if not text or len(text) < 3 or len(text) > 200:
+            continue
+        if any(x in low for x in ("/en/", "/de/", "/fr/", "/page/", "?lang=")):
+            continue
+        abs_url = urljoin(source_url, a["href"])
+        if abs_url in seen:
+            continue
+        seen.add(abs_url)
+        out.append({
+            "name": text, "tagline": "", "stand": "",
+            "categories": [], "logo_url": "", "description": "",
+            "source_url": abs_url,
+        })
+    return out
+
+
+_EXTRACTORS = [
+    ("provada", _provada_extractor),
+    ("foodtech", lambda html, url: parse_exhibitors_html(html, url)),
+    ("safetyevent", _safetyevent_after_render_extractor),
+    ("generic_anchor", _generic_anchor_extractor),
+]
+
+
+def _firecrawl(url: str, meta: dict, logger) -> tuple[list[dict], int]:
+    """Fetch via Firecrawl, then try extractors; return (exhibitors, credits_charged).
+    ``meta.strategy`` pins a specific extractor name if set."""
+    from .listing_extractor import extract_listings  # local import to avoid circular
+
+    if not firecrawl_client.has_api_key():
+        logger.event("firecrawl", "FIRECRAWL_API_KEY not set — skipped",
+                     status="error")
+        return [], 0
+
+    t = perf_counter()
+    result = firecrawl_client.scrape(url, wait_ms=5000, use_actions=True)
+    logger.event("firecrawl_fetch",
+                 f"rendered: {'ok' if result['ok'] else result.get('error')}  "
+                 f"({len(result['html']):,} bytes, {result['credits_charged']} cr)",
+                 duration_ms=(perf_counter() - t) * 1000,
+                 status="ok" if result["ok"] else "error",
+                 credits=float(result["credits_charged"]))
+    if not result["ok"]:
+        return [], result["credits_charged"]
+
+    html = result["html"]
+    strategy_hint = (meta.get("strategy") or "").lower()
+
+    # If a strategy is pinned, use only that extractor
+    if strategy_hint:
+        for name, fn in _EXTRACTORS:
+            if name == strategy_hint:
+                out = fn(html, url)
+                logger.event("firecrawl_extract",
+                             f"strategy={name}: {len(out)} exhibitors")
+                return out, result["credits_charged"]
+
+    # Otherwise auto-detect: run every extractor, take the one with the most
+    best_name = ""
+    best_out: list[dict] = []
+    for name, fn in _EXTRACTORS:
+        try:
+            out = fn(html, url)
+        except Exception:  # noqa: BLE001 -- extractor bugs shouldn't kill the whole scrape
+            out = []
+        if len(out) > len(best_out):
+            best_out = out
+            best_name = name
+    logger.event("firecrawl_extract",
+                 f"best strategy={best_name or 'none'}: {len(best_out)} exhibitors")
+    return best_out, result["credits_charged"]
+
