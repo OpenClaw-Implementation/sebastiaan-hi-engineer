@@ -285,6 +285,40 @@ def _safetyevent_after_render_extractor(html: str, source_url: str) -> list[dict
     return out
 
 
+# Two common Jaarbeurs/Ahoy patterns: each exhibitor is one cell with the stand
+# glued on. TechniShow uses "Name - 12.B070"; VSK/BouwBeurs/Foodspec use
+# "Name (10.C074)". One extractor covers both.
+_STAND_DASH_RE = re.compile(r"^(.{2,120}?)\s+[-–]\s+(\d{1,3}\.[A-Z]\d{2,4})\s*$")
+_STAND_PAREN_RE = re.compile(r"^(.{2,120}?)\s+\((\d{1,3}\.[A-Z]\d{2,4})\)\s*$")
+
+
+def _stand_table_extractor(html: str, source_url: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "header", "footer", "nav"]):
+        tag.decompose()
+    out: list[dict] = []
+    seen: set[str] = set()
+    for cell in soup.find_all(["td", "li"]):
+        text = _clean(cell.get_text(" "))
+        if not text:
+            continue
+        m = _STAND_DASH_RE.match(text) or _STAND_PAREN_RE.match(text)
+        if not m:
+            continue
+        name = _clean(m.group(1))
+        stand = m.group(2)
+        key = name.lower()
+        if key in seen or len(name) < 2:
+            continue
+        seen.add(key)
+        out.append({
+            "name": name, "tagline": "", "stand": stand,
+            "categories": [], "logo_url": "", "description": "",
+            "source_url": source_url,
+        })
+    return out
+
+
 def _generic_anchor_extractor(html: str, source_url: str) -> list[dict]:
     """Very generic: any anchor whose href contains /exposant|/exhibitor|/standhouder|/partner/."""
     soup = BeautifulSoup(html, "html.parser")
@@ -315,6 +349,7 @@ def _generic_anchor_extractor(html: str, source_url: str) -> list[dict]:
 
 _EXTRACTORS = [
     ("provada", _provada_extractor),
+    ("stand_table", _stand_table_extractor),
     ("foodtech", lambda html, url: parse_exhibitors_html(html, url)),
     ("safetyevent", _safetyevent_after_render_extractor),
     ("generic_anchor", _generic_anchor_extractor),
