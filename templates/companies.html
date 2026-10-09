@@ -133,6 +133,10 @@
   const prog = document.getElementById("batch-progress");
   const BATCH = 10;
   if (btn) btn.addEventListener("click", async () => {
+    // Paid providers run for every pending company; make the cost explicit first.
+    const pending = {{ counts.get('pending', 0) | int }};
+    if (!confirm(`This runs the paid enrichment chain on ${pending.toLocaleString()} pending companies ` +
+                 `(about $${(pending * 0.02).toFixed(0)} at the past average of $0.02 each). Continue?`)) return;
     btn.disabled = true;
     let batchNo = 0, filled = 0, terminal = 0, usd = 0;
     while (true) {
