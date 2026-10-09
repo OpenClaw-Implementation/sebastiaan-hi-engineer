@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enrichment Cost Guide</title>
+<meta name="description" content="What it costs to fill the remaining gaps in the Hi-Engineer directory with each integration, based on measured usage and current prices.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4; --surface: #fcfcfb; --surface-2: #f0efec; --line: #e2e1dc;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #74736e;
+  --accent: #2a78d6; --accent-soft: #e6f0fc;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --good: #0ca30c; --warn: #b77b00; --bad: #d03b3b;
+  --good-soft: #e5f5e5; --warn-soft: #fdf3dc; --bad-soft: #fbe7e7;
+  --code-bg: #efeee9; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+  --hero-a: #e6f0fc; --hero-b: #e3f6ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --line: #34332f;
+    --text: #ffffff; --text-2: #c3c2b7; --muted: #9b9a91;
+    --accent: #3987e5; --accent-soft: #1b2a3d;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --good: #2fbf2f; --warn: #fab219; --bad: #e66767;
+    --good-soft: #17301a; --warn-soft: #33290f; --bad-soft: #3a1c1c;
+    --code-bg: #262624; --shadow: none; --hero-a: #1b2a3d; --hero-b: #15302a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --line: #34332f;
+  --text: #ffffff; --text-2: #c3c2b7; --muted: #9b9a91;
+  --accent: #3987e5; --accent-soft: #1b2a3d;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good: #2fbf2f; --warn: #fab219; --bad: #e66767;
+  --good-soft: #17301a; --warn-soft: #33290f; --bad-soft: #3a1c1c;
+  --code-bg: #262624; --shadow: none; --hero-a: #1b2a3d; --hero-b: #15302a;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .84em; background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 80px; }
+@media (max-width: 700px) { .wrap { padding: 0 16px 60px; } }
+
+.hero { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); border-radius: 18px; padding: 34px 32px; margin: 28px 0 8px; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(1.9rem, 4vw, 2.7rem); line-height: 1.1; margin: 10px 0 14px; letter-spacing: -.02em; }
+.lede { font-size: 1.1rem; color: var(--text-2); max-width: 64ch; margin: 0; }
+.hero-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 22px; }
+.hf { background: var(--surface); border-radius: 12px; padding: 14px 16px; border: 1px solid var(--line); }
+.hf .k { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.hf .v { font-size: 1.9rem; font-weight: 700; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.hf .s { font-size: .84rem; color: var(--text-2); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 18px; font-size: .85rem; color: var(--text-2); }
+.theme-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 3px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
+
+nav.jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 4px; }
+nav.jump a { font-size: .82rem; text-decoration: none; color: var(--text-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; background: var(--surface); }
+nav.jump a:hover { color: var(--text); border-color: var(--accent); }
+
+section { padding: 42px 0 4px; scroll-margin-top: 12px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tag .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: .8rem; }
+h2 { font-size: 1.65rem; line-height: 1.2; margin: 8px 0 10px; letter-spacing: -.01em; }
+h3 { font-size: 1.08rem; margin: 26px 0 8px; }
+h4 { margin: 0 0 6px; font-size: .98rem; }
+p { margin: 0 0 14px; max-width: 72ch; }
+.lead { font-size: 1.04rem; color: var(--text-2); }
+ul.clean { margin: 0 0 12px; padding-left: 20px; } ul.clean li { margin-bottom: 6px; }
+
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); min-width: 0; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+.k { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 14px 0 18px; box-shadow: var(--shadow); min-width: 0; }
+.chart-title { font-weight: 700; margin: 0 0 2px; }
+.chart-sub { font-size: .84rem; color: var(--text-2); margin: 0 0 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .84rem; color: var(--text-2); margin-top: 12px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+/* Stacked filled/missing rows */
+.srow { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) minmax(70px, auto); gap: 6px 12px; align-items: center; margin-bottom: 9px; }
+.srow .l { font-size: .88rem; line-height: 1.25; }
+.srow .r { font-size: .82rem; color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stack { display: flex; height: 16px; gap: 2px; }
+.stack > span { display: block; height: 100%; outline: none; min-width: 2px; }
+.stack > span:first-child { border-radius: 4px 0 0 4px; }
+.stack > span:last-child { border-radius: 0 4px 4px 0; }
+.stack > span:hover, .stack > span:focus-visible { filter: brightness(1.12); }
+.c1 { background: var(--s1); } .c2 { background: var(--s2); } .c3 { background: var(--s3); }
+@media (max-width: 560px) { .srow { grid-template-columns: minmax(0, 1fr) auto; } .srow .l { grid-column: 1 / -1; margin-bottom: -4px; } }
+
+/* Single bars */
+.bars { display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) minmax(70px, auto); gap: 9px 12px; align-items: center; }
+.bars .l { font-size: .88rem; line-height: 1.25; }
+.bars .track { height: 16px; position: relative; }
+.bars .fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 3px; outline: none; }
+.bars .fill.alt { background: var(--s2); }
+.bars .range { position: absolute; top: 0; bottom: 0; background: var(--s2); border-radius: 4px; min-width: 4px; outline: none; }
+.bars .fill:hover, .bars .range:hover, .bars .fill:focus-visible, .bars .range:focus-visible { filter: brightness(1.12); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--s1); }
+.bars .v { font-size: .82rem; color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 560px) { .bars { grid-template-columns: minmax(0, 1fr) auto; } .bars .l { grid-column: 1 / -1; margin-bottom: -4px; } }
+
+/* Now → after */
+.goal { display: grid; grid-template-columns: minmax(130px, 200px) minmax(0, 1fr) minmax(110px, auto); gap: 6px 12px; align-items: center; margin-bottom: 12px; }
+.goal .l { font-size: .88rem; } .goal .v { font-size: .82rem; color: var(--text-2); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gtrack { position: relative; height: 16px; background: var(--surface-2); border-radius: 4px; }
+.gtrack .now { position: absolute; left: 0; top: 0; bottom: 0; background: var(--s1); border-radius: 4px 0 0 4px; outline: none; }
+.gtrack .gain { position: absolute; top: 0; bottom: 0; background: var(--s3); border-radius: 0 4px 4px 0; outline: none; }
+.gtrack .now:hover, .gtrack .gain:hover, .gtrack .now:focus-visible, .gtrack .gain:focus-visible { filter: brightness(1.12); }
+@media (max-width: 560px) { .goal { grid-template-columns: minmax(0, 1fr) auto; } .goal .l { grid-column: 1 / -1; margin-bottom: -4px; } }
+
+/* Scenario tiles */
+.scen { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin: 16px 0; }
+.sc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; position: relative; }
+.sc.rec { border: 2px solid var(--s3); }
+.sc .badge { position: absolute; top: -11px; left: 18px; background: var(--s3); color: #fff; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 10px; border-radius: 999px; }
+.sc .price { font-size: 2.2rem; font-weight: 800; line-height: 1.1; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.sc .price small { font-size: .9rem; font-weight: 600; color: var(--text-2); }
+.sc ul { padding-left: 18px; margin: 10px 0 0; font-size: .9rem; }
+.sc li { margin-bottom: 4px; }
+
+/* Matrix */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.total td { font-weight: 700; background: var(--surface-2); }
+@media (max-width: 680px) {
+  .table-wrap { overflow: visible; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { display: none; }
+  .table-wrap tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .table-wrap tr:last-child { border-bottom: 0; }
+  .table-wrap td { border: 0; padding: 2px 0; text-align: left; }
+  .table-wrap td:first-child { font-weight: 700; }
+  .table-wrap td.num { text-align: left; }
+  .table-wrap td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); }
+}
+
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; font-weight: 700; padding: 2px 9px 2px 7px; border-radius: 999px; white-space: nowrap; color: var(--text); }
+.pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; }
+.pill.good { background: var(--good-soft); } .pill.good::before { background: var(--good); }
+.pill.warn { background: var(--warn-soft); } .pill.warn::before { background: var(--warn); }
+.pill.bad { background: var(--bad-soft); }   .pill.bad::before { background: var(--bad); }
+.pill.free { background: var(--accent-soft); } .pill.free::before { background: var(--accent); }
+
+.callout { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+.callout p { margin: 0 0 6px; } .callout p:last-child { margin: 0; }
+.callout.good { background: var(--good-soft); } .callout.warn { background: var(--warn-soft); } .callout.info { background: var(--accent-soft); }
+.ico { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: .72rem; font-weight: 800; margin-top: 3px; }
+.ico.good { background: var(--good); } .ico.warn { background: var(--warn); color: #000; } .ico.info { background: var(--accent); }
+
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+.steps .cost { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.steps p { margin: 2px 0 0; font-size: .88rem; color: var(--text-2); }
+@media (max-width: 560px) { .steps li { grid-template-columns: 34px minmax(0, 1fr); } .steps .cost { grid-column: 2; } }
+
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: var(--surface); font-size: .8rem; line-height: 1.35; padding: 7px 10px; border-radius: 6px; max-width: 280px; opacity: 0; transition: opacity .08s; }
+#tip.on { opacity: 1; }
+.foot { margin-top: 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: .84rem; color: var(--muted); }
+.foot li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Hi-Engineer · enrichment cost guide · 9 October 2026</div>
+  <h1>Filling every remaining gap costs about $13 — if we pick the right tools</h1>
+  <p class="lede">
+    The directory has 3,066 companies and 791 contacts. This guide shows what is
+    still missing, which integration can fill each gap, and what it costs. Costs
+    are worked out from the 2,547 enrichment attempts recorded since May and each
+    provider's current published prices.
+  </p>
+  <div class="hero-figures">
+    <div class="hf"><div class="k">Recommended route</div><div class="v">≈ $13</div><div class="s">all gaps that tools can fill; up to ~$25 if more emails are found</div></div>
+    <div class="hf"><div class="k">Running the chain as it is</div><div class="v">$30–37</div><div class="s">for the 1,876 imported companies alone, mostly Apollo</div></div>
+    <div class="hf"><div class="k">Premium add-ons</div><div class="v">$90–300</div><div class="s">phones via Apollo, or a Clay subscription</div></div>
+  </div>
+  <div class="toolbar"><span>All amounts in US dollars; estimates from measured usage.</span><button class="theme-btn" type="button" id="themeBtn">Light / dark</button></div>
+</header>
+
+<nav class="jump" aria-label="Sections">
+  <a href="#gaps">1 · What's missing</a><a href="#tools">2 · Who can fill it</a><a href="#value">3 · Value per tool</a>
+  <a href="#jobs">4 · Cost per job</a><a href="#options">5 · Three options</a><a href="#after">6 · The result</a>
+  <a href="#plan">7 · How to run it</a><a href="#notes">8 · Assumptions</a>
+</nav>
+
+<!-- 1 -->
+<section id="gaps">
+  <div class="tag"><span class="n">1</span>What's missing</div>
+  <h2>The gaps, field by field</h2>
+  <p class="lead">Blue is filled, orange is missing. Hover or tab to a bar for exact counts. Most of the orange sits in four fields: specialities, industry, category and contact emails.</p>
+  <div class="chart">
+    <div class="chart-title">Company fields (3,066 companies)</div>
+    <div class="chart-sub">Plus contact emails at the bottom (791 contacts)</div>
+    <div class="srow"><div class="l">Website</div><div class="stack"><span class="c1" style="width:87.2%" tabindex="0" data-tip="Website · filled 2,675"></span><span class="c2" style="width:12.8%" tabindex="0" data-tip="Website · missing 391 (290 are companies nothing was found for)"></span></div><div class="r">391 missing</div></div>
+    <div class="srow"><div class="l">Location</div><div class="stack"><span class="c1" style="width:87.1%" tabindex="0" data-tip="Location · filled 2,671"></span><span class="c2" style="width:12.9%" tabindex="0" data-tip="Location · missing 395"></span></div><div class="r">395 missing</div></div>
+    <div class="srow"><div class="l">Summary</div><div class="stack"><span class="c1" style="width:81.5%" tabindex="0" data-tip="Summary · filled 2,498"></span><span class="c2" style="width:18.5%" tabindex="0" data-tip="Summary · missing 568"></span></div><div class="r">568 missing</div></div>
+    <div class="srow"><div class="l">LinkedIn page</div><div class="stack"><span class="c1" style="width:68.2%" tabindex="0" data-tip="LinkedIn · filled 2,092"></span><span class="c2" style="width:31.8%" tabindex="0" data-tip="LinkedIn · missing 974 (608 of them are Excel imports)"></span></div><div class="r">974 missing</div></div>
+    <div class="srow"><div class="l">Phone</div><div class="stack"><span class="c1" style="width:65.1%" tabindex="0" data-tip="Phone · filled 1,997"></span><span class="c2" style="width:34.9%" tabindex="0" data-tip="Phone · missing 1,069"></span></div><div class="r">1,069 missing</div></div>
+    <div class="srow"><div class="l">Category</div><div class="stack"><span class="c1" style="width:63.2%" tabindex="0" data-tip="Category · filled 1,938"></span><span class="c2" style="width:36.8%" tabindex="0" data-tip="Category · missing 1,128"></span></div><div class="r">1,128 missing</div></div>
+    <div class="srow"><div class="l">Email (company)</div><div class="stack"><span class="c1" style="width:60.1%" tabindex="0" data-tip="Company email · filled 1,843"></span><span class="c2" style="width:39.9%" tabindex="0" data-tip="Company email · missing 1,223"></span></div><div class="r">1,223 missing</div></div>
+    <div class="srow"><div class="l">Industry</div><div class="stack"><span class="c1" style="width:28.9%" tabindex="0" data-tip="Industry · filled 887"></span><span class="c2" style="width:71.1%" tabindex="0" data-tip="Industry · missing 2,179 (1,711 are Excel imports)"></span></div><div class="r">2,179 missing</div></div>
+    <div class="srow"><div class="l">News / jobs page</div><div class="stack"><span class="c1" style="width:23.6%" tabindex="0" data-tip="News page · filled 724"></span><span class="c2" style="width:76.4%" tabindex="0" data-tip="News page · missing; 1,951 of these have a website we can check for free"></span></div><div class="r">1,951 checkable</div></div>
+    <div class="srow"><div class="l">Specialities</div><div class="stack"><span class="c1" style="width:8.2%" tabindex="0" data-tip="Specialities · filled 252"></span><span class="c2" style="width:91.8%" tabindex="0" data-tip="Specialities · missing 2,814 (2,246 have a summary to work from)"></span></div><div class="r">2,814 missing</div></div>
+    <div class="srow" style="margin-top:16px"><div class="l"><b>Contact email</b></div><div class="stack"><span class="c1" style="width:1.8%" tabindex="0" data-tip="Contact email · filled 14"></span><span class="c2" style="width:98.2%" tabindex="0" data-tip="Contact email · missing 777 (412 in priority roles)"></span></div><div class="r">777 missing</div></div>
+    <div class="legend"><span><span class="sw c1"></span>Filled</span><span><span class="sw c2"></span>Missing</span></div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><div class="k">1,876 imported from the Excel</div><p style="margin-top:6px">Already have website, email and summary. Missing LinkedIn (608) and industry (1,711).</p></div>
+    <div class="card"><div class="k">301 "nothing found"</div><p style="margin-top:6px">Every provider was tried in July and found nothing; 290 have no website or LinkedIn. They need a different approach: web search.</p></div>
+    <div class="card"><div class="k">791 contacts</div><p style="margin-top:6px">All have a personal LinkedIn page, which makes finding emails much easier. 777 have no email yet.</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="tools">
+  <div class="tag"><span class="n">2</span>Who can fill it</div>
+  <h2>The right tool for each gap</h2>
+  <p class="lead">Not every gap can be bought. Some can only be filled free from the company's own website, or with AI working from text we already have.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Gap</th><th class="num">Records</th><th>Best tool</th><th>Backup</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>LinkedIn page</td><td class="num" data-l="Records">608</td><td data-l="Best">IcyPeas <span class="pill good">cheap</span></td><td data-l="Backup">Apollo <span class="pill bad">costly</span></td><td data-l="Why">IcyPeas returned a LinkedIn page on 60% of attempts</td></tr>
+        <tr><td>Industry</td><td class="num" data-l="Records">1,711</td><td data-l="Best">IcyPeas <span class="pill good">cheap</span></td><td data-l="Backup">Claude AI from the summary</td><td data-l="Why">IcyPeas returned industry on 59% of attempts; Apollo never did</td></tr>
+        <tr><td>Website for "nothing found"</td><td class="num" data-l="Records">301</td><td data-l="Best">Firecrawl web search <span class="pill free">free plan</span></td><td data-l="Backup">Manual lookup</td><td data-l="Why">IcyPeas and Apollo already failed on these</td></tr>
+        <tr><td>News / jobs pages</td><td class="num" data-l="Records">1,951</td><td data-l="Best">Built-in page check <span class="pill free">free</span></td><td data-l="Backup">—</td><td data-l="Why">Plain web requests; found a page 63% of the time</td></tr>
+        <tr><td>Category</td><td class="num" data-l="Records">1,128</td><td data-l="Best">Claude AI <span class="pill good">cheap</span></td><td data-l="Backup">More keyword rules (free)</td><td data-l="Why">Needs judgement on free text; rules already hit their limit</td></tr>
+        <tr><td>Specialities</td><td class="num" data-l="Records">2,246</td><td data-l="Best">Claude AI from the summary <span class="pill good">cheap</span></td><td data-l="Backup">—</td><td data-l="Why">No provider has ever returned this field</td></tr>
+        <tr><td>Job and news tags</td><td class="num" data-l="Records">2,051</td><td data-l="Best">Claude AI <span class="pill good">cheap</span></td><td data-l="Backup">More keyword rules (free)</td><td data-l="Why">Short titles in Dutch, English and German</td></tr>
+        <tr><td>Contact email</td><td class="num" data-l="Records">777</td><td data-l="Best">IcyPeas email finder <span class="pill good">cheap</span></td><td data-l="Backup">FullEnrich <span class="pill warn">plan needed</span></td><td data-l="Why">IcyPeas charges only for emails found, at $0.019</td></tr>
+        <tr><td>Company phone</td><td class="num" data-l="Records">1,069</td><td data-l="Best">Website contact page <span class="pill free">free, to build</span></td><td data-l="Backup">Apollo <span class="pill bad">costly</span></td><td data-l="Why">Apollo is the only provider that returned phones, at ~$0.21 each</td></tr>
+        <tr><td>Company email</td><td class="num" data-l="Records">1,223</td><td data-l="Best">Website contact page <span class="pill free">free, to build</span></td><td data-l="Backup">—</td><td data-l="Why">None of the integrations return a general company email</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="legend"><span><span class="pill good">cheap</span> under $0.02 per result</span><span><span class="pill warn">plan needed</span> needs a paid subscription</span><span><span class="pill bad">costly</span> $0.20+ per useful result</span><span><span class="pill free">free</span> no usage cost</span></div>
+</section>
+
+<!-- 3 -->
+<section id="value">
+  <div class="tag"><span class="n">3</span>Value per tool</div>
+  <h2>What one useful result really costs</h2>
+  <p class="lead">Measured on this project's own 2,547 enrichment attempts: the total spent on each provider divided by the number of times it actually found something.</p>
+  <div class="chart">
+    <div class="chart-title">Cost per useful result, company enrichment</div>
+    <div class="chart-sub">Apollo bills for every call, found or not; IcyPeas charges a fraction of a credit per result</div>
+    <div class="bars">
+      <div class="l">IcyPeas</div><div class="track"><div class="fill" style="width:0.5%" tabindex="0" data-tip="IcyPeas · $0.79 over 833 hits = $0.001 per hit (70% hit rate)"></div></div><div class="v">$0.001</div>
+      <div class="l">Built-in page check</div><div class="track"><div class="fill" style="width:0" tabindex="0" data-tip="Page check · free, found a page 494 of 785 times"></div></div><div class="v">free</div>
+      <div class="l">Apollo</div><div class="track"><div class="fill alt" style="width:100%" tabindex="0" data-tip="Apollo · $23.40 over 108 hits = $0.22 per hit (22% hit rate); $14.20 was spent on companies where nothing was found"></div></div><div class="v">$0.22</div>
+    </div>
+    <div class="legend"><span><span class="sw c1"></span>Cheap</span><span><span class="sw c2"></span>Costly</span></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">Price per contact email found</div>
+    <div class="chart-sub">Published prices, October 2026. A range shows plan-dependent pricing.</div>
+    <div class="bars">
+      <div class="l">IcyPeas</div><div class="track"><div class="range" style="left:0;width:4.75%;background:var(--s1)" tabindex="0" data-tip="IcyPeas · 1 credit per email found; $0.019 on the Basic plan, $0.005–0.010 on bigger plans"></div></div><div class="v">$0.005–0.019</div>
+      <div class="l">Apollo</div><div class="track"><div class="range" style="left:5%;width:45%" tabindex="0" data-tip="Apollo · 1 credit per email; ~$0.02 inside a plan's monthly credits, $0.20 per credit once they run out"></div></div><div class="v">$0.02–0.20</div>
+      <div class="l">FullEnrich</div><div class="track"><div class="range" style="left:15%;width:1.5%" tabindex="0" data-tip="FullEnrich · 1 credit per work email found at €0.055 (≈ $0.06); Pro plan €55/month"></div></div><div class="v">≈ $0.06</div>
+      <div class="l">Clay (waterfall)</div><div class="track"><div class="range" style="left:50%;width:50%" tabindex="0" data-tip="Clay · 4–8 credits per found email through a 3-provider waterfall ≈ $0.20–0.40; Launch plan $167/month"></div></div><div class="v">$0.20–0.40</div>
+    </div>
+    <div class="legend"><span>Scale: $0 → $0.40</span></div>
+  </div>
+  <div class="callout good"><div class="ico good">✓</div><div><p><b>The biggest saving is simply not calling Apollo by default.</b> It accounted for 97% of provider spend but only 11% of the useful paid results.</p></div></div>
+</section>
+
+<!-- 4 -->
+<section id="jobs">
+  <div class="tag"><span class="n">4</span>Cost per job</div>
+  <h2>Every job, priced</h2>
+  <p class="lead">The recommended route first, then the optional extras. "Expected result" applies the hit rates measured in this project; where we have no measurement, the table says so.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Job</th><th>Tool</th><th class="num">Records</th><th>Basis</th><th class="num">Cost</th><th>Expected result</th></tr></thead>
+      <tbody>
+        <tr><td>LinkedIn + industry for Excel imports</td><td data-l="Tool">IcyPeas only (Apollo off)</td><td class="num" data-l="Records">1,876</td><td data-l="Basis">$0.0007 per attempt (measured)</td><td class="num" data-l="Cost">$1.30</td><td data-l="Result">≈ 365 LinkedIn pages, ≈ 1,010 industries</td></tr>
+        <tr><td>Websites for "nothing found"</td><td data-l="Tool">Firecrawl search</td><td class="num" data-l="Records">301</td><td data-l="Basis">2 credits per search, inside the free 1,000/month</td><td class="num" data-l="Cost">$0</td><td data-l="Result">Unknown; test 20 first</td></tr>
+        <tr><td>News and jobs pages + listings</td><td data-l="Tool">Built-in page check + pipelines</td><td class="num" data-l="Records">1,951</td><td data-l="Basis">Plain web requests</td><td class="num" data-l="Cost">$0</td><td data-l="Result">≈ 1,050 news pages (54%) and ≈ 850 jobs pages (42%)</td></tr>
+        <tr><td>Contact emails</td><td data-l="Tool">IcyPeas email finder + verifier</td><td class="num" data-l="Records">777</td><td data-l="Basis">$0.019 per email found + $0.0019 to verify</td><td class="num" data-l="Cost">$8 (max $16)</td><td data-l="Result">≈ 390 emails if half are found</td></tr>
+        <tr><td>Categories</td><td data-l="Tool">Claude Opus 5.5, Batch API</td><td class="num" data-l="Records">1,128</td><td data-l="Basis">≈ 170k input + 40k output tokens, 50% batch discount</td><td class="num" data-l="Cost">$0.75</td><td data-l="Result">Nearly all assigned; spot-check 20</td></tr>
+        <tr><td>Specialities</td><td data-l="Tool">Claude Opus 5.5, Batch API</td><td class="num" data-l="Records">2,246</td><td data-l="Basis">≈ 240k input + 135k output tokens</td><td class="num" data-l="Cost">$1.85</td><td data-l="Result">5–8 keywords per company with a summary</td></tr>
+        <tr><td>Job and news tags</td><td data-l="Tool">Claude Opus 5.5, Batch API</td><td class="num" data-l="Records">2,051</td><td data-l="Basis">≈ 55k input + 40k output tokens</td><td class="num" data-l="Cost">$0.50</td><td data-l="Result">A role or topic for each title</td></tr>
+        <tr class="total"><td>Recommended total</td><td data-l="Tool">—</td><td class="num" data-l="Records">—</td><td data-l="Basis">Usage only</td><td class="num" data-l="Cost">≈ $13</td><td data-l="Result">Up to ~$25 if more emails are found than expected</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Optional extras</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Extra</th><th>Tool</th><th class="num">Records</th><th class="num">Cost</th><th>What you get</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Company phone numbers</td><td data-l="Tool">Apollo</td><td class="num" data-l="Records">739</td><td class="num" data-l="Cost">≈ $35</td><td data-l="Get">≈ 160 phones (22% hit rate)</td><td data-l="Verdict"><span class="pill bad">poor value</span></td></tr>
+        <tr><td>Second pass on missed emails</td><td data-l="Tool">FullEnrich</td><td class="num" data-l="Records">≈ 390</td><td class="num" data-l="Cost">€55 plan</td><td data-l="Get">Charges only on success; 1,000 credits a month</td><td data-l="Verdict"><span class="pill warn">only if the pilot misses many</span></td></tr>
+        <tr><td>Full email waterfall</td><td data-l="Tool">Clay</td><td class="num" data-l="Records">777</td><td class="num" data-l="Cost">$167 plan + $80–160</td><td data-l="Get">Highest coverage, several providers</td><td data-l="Verdict"><span class="pill bad">too costly at this size</span></td></tr>
+        <tr><td>Phones and emails from websites</td><td data-l="Tool">Contact-page scraper (to build)</td><td class="num" data-l="Records">≈ 1,200</td><td class="num" data-l="Cost">$0 usage</td><td data-l="Get">Company phone and general email from the "contact" page</td><td data-l="Verdict"><span class="pill good">best value; needs dev time</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="options">
+  <div class="tag"><span class="n">5</span>Three options</div>
+  <h2>Choose a route</h2>
+  <div class="scen">
+    <div class="sc">
+      <div class="k">Option A</div><h4 style="margin-top:6px">Run the chain as it is</h4>
+      <div class="price">$30–37 <small>usage</small></div>
+      <ul><li>Imported companies only</li><li>Apollo called whenever IcyPeas misses LinkedIn</li><li>Contacts, specialities, categories untouched</li></ul>
+    </div>
+    <div class="sc rec">
+      <span class="badge">Recommended</span>
+      <div class="k">Option B</div><h4 style="margin-top:6px">Smart route</h4>
+      <div class="price">≈ $13 <small>usage, up to $25</small></div>
+      <ul><li>IcyPeas for companies and contact emails</li><li>Free page checks and Firecrawl search</li><li>Claude for categories, specialities and tags</li><li>Fills the most gaps for the least money</li></ul>
+    </div>
+    <div class="sc">
+      <div class="k">Option C</div><h4 style="margin-top:6px">Smart route + premium</h4>
+      <div class="price">$90–300 <small>incl. plans</small></div>
+      <ul><li>Adds Apollo phones (≈ $35)</li><li>Adds FullEnrich (€55) or Clay ($167 + usage)</li><li>Small coverage gain for the extra spend</li></ul>
+    </div>
+  </div>
+  <div class="callout info"><div class="ico info">i</div><div><p><b>Subscriptions you may already be paying for.</b> The app prices IcyPeas at the Basic-plan rate ($19/month for 1,000 credits). Option B needs roughly 500 IcyPeas credits, so if that plan is active the extra cash cost may be close to $0. Firecrawl shows exactly 1,000 credits a month, which matches its free plan.</p></div></div>
+</section>
+
+<!-- 6 -->
+<section id="after">
+  <div class="tag"><span class="n">6</span>The result</div>
+  <h2>Coverage before and after Option B</h2>
+  <p class="lead">Blue is today, green is the expected gain. Gains use this project's measured hit rates; contact emails assume half are found.</p>
+  <div class="chart">
+    <div class="goal"><div class="l">Category</div><div class="gtrack"><div class="now" style="width:63.2%" tabindex="0" data-tip="Today 1,938 (63%)"></div><div class="gain" style="left:63.2%;width:33%" tabindex="0" data-tip="+ up to ~1,010 assigned by Claude"></div></div><div class="v">63% → ~96%</div></div>
+    <div class="goal"><div class="l">Specialities</div><div class="gtrack"><div class="now" style="width:8.2%" tabindex="0" data-tip="Today 252 (8%)"></div><div class="gain" style="left:8.2%;width:73.3%" tabindex="0" data-tip="+ 2,246 from summaries"></div></div><div class="v">8% → ~81%</div></div>
+    <div class="goal"><div class="l">Industry</div><div class="gtrack"><div class="now" style="width:28.9%" tabindex="0" data-tip="Today 887 (29%)"></div><div class="gain" style="left:28.9%;width:32.9%" tabindex="0" data-tip="+ ≈ 1,010 from IcyPeas"></div></div><div class="v">29% → ~62%</div></div>
+    <div class="goal"><div class="l">LinkedIn page</div><div class="gtrack"><div class="now" style="width:68.2%" tabindex="0" data-tip="Today 2,092 (68%)"></div><div class="gain" style="left:68.2%;width:11.9%" tabindex="0" data-tip="+ ≈ 365 from IcyPeas"></div></div><div class="v">68% → ~80%</div></div>
+    <div class="goal"><div class="l">News page</div><div class="gtrack"><div class="now" style="width:23.6%" tabindex="0" data-tip="Today 724 (24%)"></div><div class="gain" style="left:23.6%;width:34.2%" tabindex="0" data-tip="+ ≈ 1,050 from free page checks (54% measured for news pages)"></div></div><div class="v">24% → ~58%</div></div>
+    <div class="goal"><div class="l">Contact email</div><div class="gtrack"><div class="now" style="width:1.8%" tabindex="0" data-tip="Today 14 (2%)"></div><div class="gain" style="left:1.8%;width:49.3%" tabindex="0" data-tip="+ ≈ 390 if IcyPeas finds half (pilot will confirm)"></div></div><div class="v">2% → ~51%</div></div>
+    <div class="legend"><span><span class="sw c1"></span>Today</span><span><span class="sw c3"></span>Expected gain</span></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="plan">
+  <div class="tag"><span class="n">7</span>How to run it</div>
+  <h2>Six steps, cheapest and safest first</h2>
+  <p class="lead">Each paid step starts with a 20-record test, so the real hit rate and cost are known before the full run.</p>
+  <ol class="steps">
+    <li><div><b>Switch Apollo off by default</b><p>One setting, no code change: <code>heroku config:set ENABLE_APOLLO=false -a hi-engineer-app</code>. Keep Apollo for targeted use only.</p></div><div class="cost">$0</div></li>
+    <li><div><b>Free checks first</b><p>Page check and jobs/news pipelines on the 1,951 companies with a website.</p></div><div class="cost">$0</div></li>
+    <li><div><b>IcyPeas on the 1,876 imported companies</b><p>Test 20, compare fields filled, then run all.</p></div><div class="cost">≈ $1.30</div></li>
+    <li><div><b>Contact emails with IcyPeas</b><p>Test 50 (the pilot in the roadmap), verify the found emails, then the rest in weekly batches.</p></div><div class="cost">≈ $8</div></li>
+    <li><div><b>Claude for categories, specialities and tags</b><p>Needs an Anthropic API key (none is configured yet). Test 20 of each and review, then submit as one batch job.</p></div><div class="cost">≈ $3</div></li>
+    <li><div><b>Firecrawl search for the 301 "nothing found"</b><p>Inside the free monthly credits; test 20, then run the rest.</p></div><div class="cost">$0</div></li>
+  </ol>
+  <div class="callout warn"><div class="ico warn">!</div><div><p><b>Development needed for steps 4–6.</b> The contact email finder, the Claude classification and the Firecrawl website search are not built into the app yet; today's chain only enriches companies. Steps 1–3 can run now.</p></div></div>
+</section>
+
+<!-- 8 -->
+<section id="notes">
+  <div class="tag"><span class="n">8</span>Assumptions</div>
+  <h2>What these numbers rest on</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Measured in this project</h4>
+      <ul class="clean">
+        <li>2,547 enrichment attempts, May–July 2026: IcyPeas 70% hit rate at $0.0007 per attempt; Apollo 22% at $0.047; page check 63%, free.</li>
+        <li>Field gaps and text lengths read from the live database on 9 October.</li>
+        <li>Apollo prices in the logs use the code's assumption of $0.05 per credit.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Estimated</h4>
+      <ul class="clean">
+        <li>Contact email find rate of 50%; the 50-contact pilot will measure it.</li>
+        <li>Claude token counts from average text length (about 4 characters per token), including some thinking; real cost could be ±50%, still under $5.</li>
+        <li>Unknown yield for Firecrawl website search.</li>
+        <li>Which IcyPeas and Apollo plans are active — check both dashboards.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot">
+    <p><b>Price sources</b> (checked 9 October 2026):</p>
+    <ul class="clean">
+      <li><a href="https://www.icypeas.com/pricing">IcyPeas pricing</a> — Basic $19/month for 1,000 credits; email finder 1 credit per found email; verifier 0.1; find companies 0.02 per result.</li>
+      <li><a href="https://fullenrich.com/pricing">FullEnrich pricing</a> — Pro €55/month for 1,000 credits; work email 1 credit, charged only when found.</li>
+      <li><a href="https://www.clay.com/pricing">Clay pricing</a> — Launch $167/month for 2,500 data credits; <a href="https://www.landbase.com/blog/clay-pricing">waterfall cost estimates</a>.</li>
+      <li><a href="https://www.firecrawl.dev/pricing">Firecrawl pricing</a> — free plan 1,000 credits/month; search 2 credits per 10 results.</li>
+      <li>Apollo (prices not published on its own page): <a href="https://www.11x.ai/guides/apollo-io-pricing">11x guide</a>, <a href="https://www.joinvalley.co/blog/apollo-pricing-and-credits-explained-2026">Valley guide</a> — Basic $49–65 per user/month, 1 credit per email, $0.20 overage.</li>
+      <li>Claude API: Opus 5.5 $4 / $20 per million input / output tokens; Batch API 50% off.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+<div id="tip" role="tooltip"></div>
+<script>
+(function () {
+  var tip = document.getElementById('tip');
+  function show(el, x, y) {
+    tip.textContent = el.getAttribute('data-tip'); tip.classList.add('on');
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(Math.max(8, x - w / 2), window.innerWidth - w - 8) + 'px';
+    var top = y - h - 12; tip.style.top = (top < 8 ? y + 16 : top) + 'px';
+  }
+  function hide() { tip.classList.remove('on'); }
+  document.querySelectorAll('[data-tip]').forEach(function (el) {
+    el.addEventListener('mousemove', function (e) { show(el, e.clientX, e.clientY); });
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', function () { var r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); });
+    el.addEventListener('blur', hide);
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('hi-cost-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark'; root.setAttribute('data-theme', next);
+    try { localStorage.setItem('hi-cost-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
