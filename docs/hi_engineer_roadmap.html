@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hi-Engineer Q4 Roadmap</title>
+<meta name="description" content="The plan from 12 October to year-end 2026: weekly cadence, who does what (Pogan and Seb), data analysis and usage, budget per integration, and testing.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4; --surface: #fcfcfb; --surface-2: #f0efec; --line: #e2e1dc;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #74736e;
+  --accent: #2a78d6; --accent-soft: #e6f0fc;
+  --pogan: #2a78d6; --seb: #eb6834; --both: #1baf7a;
+  --pogan-soft: #e6f0fc; --seb-soft: #fdeee7; --both-soft: #e3f6ee;
+  --good: #0ca30c; --warn: #b77b00; --good-soft: #e5f5e5; --warn-soft: #fdf3dc;
+  --code-bg: #efeee9; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+  --hero-a: #e6f0fc; --hero-b: #e3f6ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --line: #34332f;
+    --text: #ffffff; --text-2: #c3c2b7; --muted: #9b9a91;
+    --accent: #3987e5; --accent-soft: #1b2a3d;
+    --pogan: #3987e5; --seb: #d95926; --both: #199e70;
+    --pogan-soft: #1b2a3d; --seb-soft: #3a2218; --both-soft: #15302a;
+    --good: #2fbf2f; --warn: #fab219; --good-soft: #17301a; --warn-soft: #33290f;
+    --code-bg: #262624; --shadow: none; --hero-a: #1b2a3d; --hero-b: #15302a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --line: #34332f;
+  --text: #ffffff; --text-2: #c3c2b7; --muted: #9b9a91;
+  --accent: #3987e5; --accent-soft: #1b2a3d;
+  --pogan: #3987e5; --seb: #d95926; --both: #199e70;
+  --pogan-soft: #1b2a3d; --seb-soft: #3a2218; --both-soft: #15302a;
+  --good: #2fbf2f; --warn: #fab219; --good-soft: #17301a; --warn-soft: #33290f;
+  --code-bg: #262624; --shadow: none; --hero-a: #1b2a3d; --hero-b: #15302a;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .84em;
+  background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+
+.layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 32px 0; }
+.toc-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
+.toc ol { list-style: none; margin: 0; padding: 0; }
+.toc a { display: block; padding: 5px 10px; border-left: 2px solid var(--line); color: var(--text-2); text-decoration: none; font-size: .9rem; line-height: 1.35; }
+.toc a:hover, .toc a.active { color: var(--text); border-left-color: var(--accent); }
+.toc a.active { font-weight: 600; }
+.toc .num { color: var(--muted); margin-right: 6px; }
+main { min-width: 0; padding: 32px 0 80px; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 0 16px; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 0 0; }
+  .toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toc a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: .8rem; }
+}
+
+.hero { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); border-radius: 18px; padding: 34px 32px; margin-bottom: 8px; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1.1; margin: 10px 0 14px; letter-spacing: -.02em; }
+.lede { font-size: 1.12rem; color: var(--text-2); max-width: 62ch; margin: 0; }
+.hero-row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 20px; align-items: center; }
+.theme-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 3px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
+
+section.doc { padding: 46px 0 6px; scroll-margin-top: 12px; }
+.tag { display: inline-flex; align-items: center; gap: 8px; font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tag .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: .8rem; letter-spacing: 0; }
+h2 { font-size: 1.7rem; line-height: 1.2; margin: 8px 0 10px; letter-spacing: -.01em; }
+h3 { font-size: 1.1rem; margin: 28px 0 8px; }
+h4 { font-size: .98rem; margin: 0 0 6px; }
+p { margin: 0 0 14px; max-width: 72ch; }
+.section-lede { font-size: 1.05rem; color: var(--text-2); }
+ul.clean { margin: 0 0 12px; padding-left: 20px; }
+ul.clean li { margin-bottom: 6px; }
+
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); min-width: 0; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+.k { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.big { font-size: 2rem; font-weight: 700; line-height: 1.1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.sub { font-size: .85rem; color: var(--text-2); margin-top: 4px; }
+
+/* Owner chips: colour + written name, never colour alone */
+.who { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 700; padding: 2px 9px 2px 7px; border-radius: 999px; white-space: nowrap; color: var(--text); }
+.who::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.who.p { background: var(--pogan-soft); } .who.p::before { background: var(--pogan); }
+.who.s { background: var(--seb-soft); }   .who.s::before { background: var(--seb); }
+.who.b { background: var(--both-soft); }  .who.b::before { background: var(--both); }
+
+/* People cards */
+.person { border-top: 4px solid var(--pogan); }
+.person.seb { border-top-color: var(--seb); }
+.person h3 { margin-top: 2px; }
+.person .role { font-size: .9rem; color: var(--text-2); margin-bottom: 10px; }
+
+/* Milestones */
+.milestones { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 22px 0 10px; }
+.milestones::before { content: ""; position: absolute; left: 6%; right: 6%; top: 15px; height: 3px; background: var(--line); border-radius: 3px; }
+.ms { position: relative; text-align: center; padding-top: 38px; min-width: 0; }
+.ms::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 21px; height: 21px; border-radius: 50%; background: var(--surface); border: 4px solid var(--accent); }
+.ms.first::before { background: var(--accent); }
+.ms .date { font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.ms h4 { margin: 4px 0 4px; font-size: .95rem; }
+.ms p { font-size: .82rem; color: var(--text-2); margin: 0; }
+@media (max-width: 760px) {
+  .milestones { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .milestones::before { left: 15px; right: auto; top: 10px; bottom: 10px; width: 3px; height: auto; }
+  .ms { text-align: left; padding: 4px 0 16px 46px; }
+  .ms::before { left: 16px; top: 8px; }
+}
+
+/* Gantt: one continuous track per row; bars positioned in week units */
+.gantt-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 16px 0; }
+.gantt { display: grid; grid-template-columns: minmax(210px, 240px) minmax(560px, 1fr); min-width: 800px; }
+.gantt > div { border-bottom: 1px solid var(--line); }
+.gweeks { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); background: var(--surface-2); }
+.gh { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); padding: 8px 4px; text-align: center; line-height: 1.25; }
+.gh.first { text-align: left; padding-left: 14px; display: flex; align-items: center; }
+.gh small { display: block; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.gl { padding: 9px 14px; font-size: .86rem; line-height: 1.3; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; }
+.gphase { grid-column: 1 / -1; background: var(--surface-2); font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); padding: 7px 14px; }
+.gtrack { position: relative; min-height: 50px;
+  background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(10% - 1px), var(--line) calc(10% - 1px), var(--line) 10%); }
+.gbar { position: absolute; top: 13px; bottom: 13px; border-radius: 6px; outline: none; color: var(--pogan); }
+.gbar:hover, .gbar:focus-visible { filter: brightness(1.12); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px currentColor; }
+.gbar.p { background: var(--pogan); color: var(--pogan); }
+.gbar.s { background: var(--seb); color: var(--seb); }
+.gbar.b { background: var(--both); color: var(--both); }
+.gbar.recur { opacity: .5; top: 18px; bottom: 18px; }
+.gbar.dot { top: 50%; bottom: auto; width: 15px; height: 15px; border-radius: 3px; transform: translate(-50%, -50%) rotate(45deg); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .85rem; color: var(--text-2); margin: 6px 0 0; align-items: center; }
+
+/* Week rhythm board */
+.week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.day { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
+.day .dn { font-weight: 700; font-size: .95rem; }
+.day .dt { font-size: .74rem; color: var(--muted); margin-bottom: 10px; }
+.slot { border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; font-size: .84rem; line-height: 1.35; border-left: 4px solid; }
+.slot:last-child { margin-bottom: 0; }
+.slot b { display: block; margin-bottom: 2px; font-size: .86rem; }
+.slot .t { display: block; color: var(--text-2); font-size: .76rem; margin-top: 4px; }
+.slot.p { background: var(--pogan-soft); border-color: var(--pogan); }
+.slot.s { background: var(--seb-soft); border-color: var(--seb); }
+.slot.b { background: var(--both-soft); border-color: var(--both); }
+.slot.a { background: var(--surface-2); border-color: var(--muted); }
+@media (max-width: 900px) { .week { grid-template-columns: minmax(0, 1fr); } }
+
+/* Checklists */
+.check { list-style: none; padding: 0; margin: 0; }
+.check li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.check li:last-child { border-bottom: 0; }
+.check li::before { content: ""; width: 16px; height: 16px; border: 2px solid var(--muted); border-radius: 4px; margin-top: 3px; }
+.check .when { color: var(--muted); font-size: .8rem; display: block; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.total td { font-weight: 700; background: var(--surface-2); }
+@media (max-width: 640px) {
+  .table-wrap { overflow: visible; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { display: none; }
+  .table-wrap tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .table-wrap tr:last-child { border-bottom: 0; }
+  .table-wrap td { border: 0; padding: 2px 0; text-align: left; }
+  .table-wrap td:first-child { font-weight: 700; }
+  .table-wrap td.num { text-align: left; color: var(--text-2); }
+  .table-wrap td[data-l]::before { content: attr(data-l) ": "; color: var(--muted); font-weight: 500; }
+}
+
+/* Progress: now → target */
+.goals { display: grid; gap: 14px; }
+.goal { display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr) minmax(90px, auto); gap: 6px 14px; align-items: center; }
+.goal .gn { font-size: .9rem; line-height: 1.3; }
+.goal .gv { font-size: .84rem; color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.track { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; }
+.track .now { position: absolute; left: 0; top: 0; bottom: 0; background: var(--pogan); border-radius: 0 4px 4px 0; min-width: 3px; outline: none; }
+.track .target { position: absolute; top: -5px; bottom: -5px; width: 3px; background: var(--text); border-radius: 2px; outline: none; }
+.track .now:hover, .track .target:hover, .track .now:focus-visible, .track .target:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--pogan); }
+@media (max-width: 560px) {
+  .goal { grid-template-columns: minmax(0, 1fr) auto; }
+  .goal .gn { grid-column: 1 / -1; }
+}
+
+/* Budget columns */
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 14px 0 18px; box-shadow: var(--shadow); }
+.chart-title { font-weight: 700; margin: 0 0 2px; }
+.chart-sub { font-size: .84rem; color: var(--text-2); margin: 0 0 12px; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: end; height: 220px; padding: 0 8%; border-bottom: 1px solid var(--line); }
+.col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+.col .cv { font-size: .9rem; font-weight: 700; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.col .stackv { width: 100%; max-width: 90px; display: flex; flex-direction: column-reverse; gap: 2px; }
+.col .seg { width: 100%; outline: none; }
+.col .seg:last-child { border-radius: 4px 4px 0 0; }
+.col .seg:hover, .col .seg:focus-visible { filter: brightness(1.12); }
+.seg.fixed { background: var(--pogan); } .seg.var { background: var(--seb); }
+.col-labels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 6px 8% 0; text-align: center; font-size: .84rem; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+
+/* Flow of data */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0; margin: 16px 0; }
+.fstep { position: relative; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-right: 0; min-width: 0; }
+.fstep:first-child { border-radius: 12px 0 0 12px; } .fstep:last-child { border-right: 1px solid var(--line); border-radius: 0 12px 12px 0; }
+.fstep h4 { margin: 6px 0 4px; font-size: .95rem; } .fstep p { font-size: .82rem; color: var(--text-2); margin: 0; }
+.fstep::after { content: ""; position: absolute; right: -8px; top: 50%; width: 14px; height: 14px; background: var(--surface); border-top: 1px solid var(--line); border-right: 1px solid var(--line); transform: translateY(-50%) rotate(45deg); z-index: 1; }
+.fstep:last-child::after { display: none; }
+@media (max-width: 760px) {
+  .flow { grid-template-columns: minmax(0, 1fr); }
+  .fstep, .fstep:first-child, .fstep:last-child { border: 1px solid var(--line); border-bottom: 0; border-radius: 0; }
+  .fstep:first-child { border-radius: 12px 12px 0 0; } .fstep:last-child { border-bottom: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+  .fstep::after { right: auto; left: 50%; top: auto; bottom: -8px; transform: translateX(-50%) rotate(135deg); }
+}
+
+.callout { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
+.callout p { margin: 0 0 6px; } .callout p:last-child { margin: 0; }
+.callout.good { background: var(--good-soft); } .callout.warn { background: var(--warn-soft); } .callout.info { background: var(--accent-soft); }
+.ico { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: .72rem; font-weight: 800; margin-top: 3px; }
+.ico.good { background: var(--good); } .ico.warn { background: var(--warn); color: #000; } .ico.info { background: var(--accent); }
+
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: var(--surface); font-size: .8rem; line-height: 1.35; padding: 7px 10px; border-radius: 6px; max-width: 280px; opacity: 0; transition: opacity .08s; }
+#tip.on { opacity: 1; }
+.footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); font-size: .84rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#start"><span class="num">0</span>Where we start</a></li>
+    <li><a href="#people"><span class="num">1</span>Who does what</a></li>
+    <li><a href="#milestones"><span class="num">2</span>Milestones</a></li>
+    <li><a href="#timeline"><span class="num">3</span>Week-by-week timeline</a></li>
+    <li><a href="#week1"><span class="num">4</span>Week 1 checklist</a></li>
+    <li><a href="#rhythm"><span class="num">5</span>The weekly rhythm</a></li>
+    <li><a href="#analysis"><span class="num">6</span>Data analysis</a></li>
+    <li><a href="#usage"><span class="num">7</span>Data usage</a></li>
+    <li><a href="#budget"><span class="num">8</span>Budget &amp; integrations</a></li>
+    <li><a href="#testing"><span class="num">9</span>Testing</a></li>
+    <li><a href="#risks"><span class="num">10</span>Risks &amp; how we handle them</a></li>
+    <li><a href="#after"><span class="num">11</span>After December</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Hi-Engineer · plan from 12 October 2026</div>
+  <h1>From a working engine to a weekly habit</h1>
+  <p class="lede">
+    The data engine for the EPCM Guide is built and live. The next ten weeks turn
+    it into a steady weekly routine: fresh data every Monday, a short review mid-week,
+    clean exports to Airtable every Friday, and a small, predictable budget. By
+    18 December the Netherlands directory should be clean, enriched and
+    flowing into the portal.
+  </p>
+  <div class="hero-row">
+    <span class="who p">Pogan · build &amp; run</span>
+    <span class="who s">Seb · direction &amp; review</span>
+    <span class="who b">Together</span>
+    <button class="theme-btn" type="button" id="themeBtn">Light / dark</button>
+  </div>
+</header>
+
+<!-- 0 ============================================================ -->
+<section class="doc" id="start">
+  <div class="tag"><span class="n">0</span>Where we start</div>
+  <h2>A strong base to build on</h2>
+  <p class="section-lede">Figures from the live system on 9 October 2026. Most of the hard work — scrapers, enrichment, the database, the interface — is already done.</p>
+  <div class="grid g4">
+    <div class="card"><div class="k">Companies</div><div class="big">3,066</div><div class="sub">87% have a website, 60% an email</div></div>
+    <div class="card"><div class="k">Contacts</div><div class="big">791</div><div class="sub">all with LinkedIn, 14 with email</div></div>
+    <div class="card"><div class="k">Jobs · News</div><div class="big">930 · 2,328</div><div class="sub">scraped from supplier sites</div></div>
+    <div class="card"><div class="k">Interface</div><div class="big">Live</div><div class="sub">release v41, tested on desktop and phone</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h4>What makes the next phase easier</h4>
+      <ul class="clean">
+        <li>Everything runs from one web app; no local tools needed to review data.</li>
+        <li>Re-importing the master Excel is safe to repeat, so Seb's manual research flows straight in.</li>
+        <li>CSV and Airtable exports already work for every table.</li>
+        <li>Every paid call is logged with its cost, so spend is visible week by week.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>The three gaps this plan closes</h4>
+      <ul class="clean">
+        <li><b>No schedule:</b> nothing has run automatically since 16 July.</li>
+        <li><b>Untagged data:</b> 37% of companies have no category; most jobs and news have no tag.</li>
+        <li><b>Missing emails:</b> 777 of 791 contacts have no email address.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 1 ============================================================ -->
+<section class="doc" id="people">
+  <div class="tag"><span class="n">1</span>Who does what</div>
+  <h2>Two roles, one rhythm</h2>
+  <p class="section-lede">Pogan keeps the engine running and improving. Seb sets direction, judges what is relevant, and owns the decisions about tools, portal and spend.</p>
+  <div class="grid g2">
+    <div class="card person">
+      <span class="who p">Pogan</span>
+      <h3>Builds and runs the engine</h3>
+      <div class="role">About 3 hours a week, plus project tasks from the timeline</div>
+      <ul class="clean">
+        <li>Keeps the schedule running and checks every Monday's runs</li>
+        <li>Turns Seb's relevance marks into better tagging rules</li>
+        <li>Runs the integrations within the agreed budget</li>
+        <li>Tests every change before and after it goes live</li>
+        <li>Sends the Friday export to Airtable and a one-line status</li>
+      </ul>
+    </div>
+    <div class="card person seb">
+      <span class="who s">Seb</span>
+      <h3>Sets direction and judges quality</h3>
+      <div class="role">About 1.5 hours a week, plus decisions from the timeline</div>
+      <ul class="clean">
+        <li>Reviews new data mid-week and marks what is relevant</li>
+        <li>Chooses the contact tool, the portal route and the tags</li>
+        <li>Approves the monthly budget and any spend above it</li>
+        <li>Adds manual research (contacts, manufacturers) to the master Excel</li>
+        <li>Uses the data: outreach lists, portal content, partner talks</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout info"><div class="ico info">i</div><div><p><b>Together, 30 minutes on Thursday:</b> look at the week's numbers, make the decisions that are due, and agree the single most important thing for next week.</p></div></div>
+</section>
+
+<!-- 2 ============================================================ -->
+<section class="doc" id="milestones">
+  <div class="tag"><span class="n">2</span>Milestones</div>
+  <h2>Five moments to celebrate</h2>
+  <p class="section-lede">Each milestone is a visible, testable result, not just activity.</p>
+  <div class="milestones">
+    <div class="ms first"><div class="date">Fri 16 Oct</div><h4>Engine on a schedule</h4><p>Daily jobs and news, weekly trade shows, all checked.</p></div>
+    <div class="ms"><div class="date">Fri 30 Oct</div><h4>Clean data, first emails</h4><p>Noise removed, categories filled, contact-tool pilot done.</p></div>
+    <div class="ms"><div class="date">Fri 20 Nov</div><h4>Portal fed weekly</h4><p>Portal route chosen; Airtable updated every Friday.</p></div>
+    <div class="ms"><div class="date">Fri 11 Dec</div><h4>Contacts reachable</h4><p>Email roll-out done; manufacturer lists imported.</p></div>
+    <div class="ms"><div class="date">Fri 18 Dec</div><h4>Year closed well</h4><p>Results reviewed; 2027 jobs board and news scoped.</p></div>
+  </div>
+</section>
+
+<!-- 3 ============================================================ -->
+<section class="doc" id="timeline">
+  <div class="tag"><span class="n">3</span>Week-by-week timeline</div>
+  <h2>Ten weeks, four phases</h2>
+  <p class="section-lede">Colour shows the owner; hover a bar for details. Diamonds are decisions.</p>
+  <div class="legend">
+    <span class="who p">Pogan</span><span class="who s">Seb</span><span class="who b">Together</span>
+    <span>◆ = decision</span>
+  </div>
+
+  <div class="gantt-wrap">
+    <div class="gantt" role="table" aria-label="Timeline from week 42 to week 51">
+      <div class="gh first">Workstream</div>
+      <div class="gweeks"><div class="gh">W42<small>12 Oct</small></div><div class="gh">W43<small>19 Oct</small></div><div class="gh">W44<small>26 Oct</small></div><div class="gh">W45<small>2 Nov</small></div><div class="gh">W46<small>9 Nov</small></div><div class="gh">W47<small>16 Nov</small></div><div class="gh">W48<small>23 Nov</small></div><div class="gh">W49<small>30 Nov</small></div><div class="gh">W50<small>7 Dec</small></div><div class="gh">W51<small>14 Dec</small></div></div>
+      <div class="gphase">Phase 1 · Switch on (W42)</div>
+      <div class="gl">Turn on the schedule <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p" style="left:calc(0% + 4px);width:calc(10% - 8px)" tabindex="0" data-tip="W42 · Pogan · Add the daily and weekly jobs in Heroku Scheduler; watch the first runs"></div></div>
+      <div class="gl">Decide on the 1,876 pending companies <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b dot" style="left:1.5%" tabindex="0" data-tip="Mon 12 Oct · Together · Skip paid enrichment for the Excel imports (recommended, saves ~$38) or enrich them"></div></div>
+      <div class="gl">Airtable and Softr demos <span class="who s">Seb</span></div>
+      <div class="gtrack"><div class="gbar s" style="left:calc(0% + 4px);width:calc(10% - 8px)" tabindex="0" data-tip="W42 · Seb · Demo sessions already planned; note what each needs from our data"></div></div>
+      <div class="gphase">Phase 2 · Clean &amp; test (W42–W44)</div>
+      <div class="gl">Mark relevance in the review workbook <span class="who s">Seb</span></div>
+      <div class="gtrack"><div class="gbar s" style="left:calc(4.0% + 4px);width:calc(16.0% - 8px)" tabindex="0" data-tip="W42–W43 · Seb · Mark job and news categories relevant / not relevant in hi_engineer_review.xlsx"></div></div>
+      <div class="gl">Remove noise, fill categories, sharpen tags <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p" style="left:calc(10% + 4px);width:calc(20% - 8px)" tabindex="0" data-tip="W43–W44 · Pogan · Filter menu items out of jobs, extend category rules for the 1,128 unassigned, apply Seb&#x27;s marks"></div></div>
+      <div class="gl">Contact-email pilot (50 contacts) <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b" style="left:calc(10% + 4px);width:calc(18.0% - 8px)" tabindex="0" data-tip="W43–W44 · Seb picks 50 contacts and 2 tools; Pogan runs them; compare hit rate and cost per email. Cap $25"></div><div class="gbar s dot" style="left:28.5%" tabindex="0" data-tip="Fri 30 Oct · Seb · Choose the contact tool"></div></div>
+      <div class="gl">Firecrawl renewal check (23 Oct) <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p dot" style="left:18.5%" tabindex="0" data-tip="Fri 23 Oct · Pogan · Compare credits used with the 1,000/month plan; propose a smaller plan if usage stays low"></div></div>
+      <div class="gphase">Phase 3 · Connect (W45–W47)</div>
+      <div class="gl">Choose the portal route <span class="who s">Seb</span></div>
+      <div class="gtrack"><div class="gbar s" style="left:calc(30% + 4px);width:calc(17.5% - 8px)" tabindex="0" data-tip="W45–W46 · Seb · Softr in-house or an agency build"></div><div class="gbar s dot" style="left:48.5%" tabindex="0" data-tip="Fri 13 Nov · Seb · Portal route decided"></div></div>
+      <div class="gl">Airtable base + weekly export <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p" style="left:calc(30% + 4px);width:calc(30% - 8px)" tabindex="0" data-tip="W45–W47 · Pogan · Create the base from airtable_schema.json, load the CSVs, then automate the Friday sync"></div></div>
+      <div class="gl">Bring the 5 JavaScript media portals online <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p" style="left:calc(40% + 4px);width:calc(20% - 8px)" tabindex="0" data-tip="W46–W47 · Pogan · Route processcontrol, solids/fluidsprocessing, industrielinqs and tim.pmg through Firecrawl, inside the plan&#x27;s credits"></div></div>
+      <div class="gphase">Phase 4 · Enrich &amp; close (W47–W51)</div>
+      <div class="gl">Manufacturer lists → master Excel → import <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b" style="left:calc(50% + 4px);width:calc(20% - 8px)" tabindex="0" data-tip="W47–W48 · Seb adds the manufacturer lists to the Excel; Pogan runs import_excel.py"></div></div>
+      <div class="gl">Contact-email roll-out <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b" style="left:calc(60% + 4px);width:calc(30% - 8px)" tabindex="0" data-tip="W48–W50 · Pogan runs the chosen tool over the remaining contacts in weekly batches; Seb spot-checks each batch. Cap $40"></div></div>
+      <div class="gl">Define 2027 jobs-board roles and news tags <span class="who s">Seb</span></div>
+      <div class="gtrack"><div class="gbar s" style="left:calc(70% + 4px);width:calc(20% - 8px)" tabindex="0" data-tip="W49–W50 · Seb · Final role list for the jobs board and the news tag list"></div></div>
+      <div class="gl">Year-end review and 2027 plan <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b" style="left:calc(90% + 4px);width:calc(10% - 8px)" tabindex="0" data-tip="W51 · Together · Review the numbers against the targets; agree the 2027 plan"></div></div>
+      <div class="gphase">Every week (W42–W51)</div>
+      <div class="gl">Monday check, Friday export &amp; status <span class="who p">Pogan</span></div>
+      <div class="gtrack"><div class="gbar p recur" style="left:calc(0% + 4px);width:calc(100% - 8px)" tabindex="0" data-tip="Every week · Pogan · Monday health check (30 min), Friday export and one-line status (15 min)"></div></div>
+      <div class="gl">Mid-week data review <span class="who s">Seb</span></div>
+      <div class="gtrack"><div class="gbar s recur" style="left:calc(0% + 4px);width:calc(100% - 8px)" tabindex="0" data-tip="Every week · Seb · Wednesday review: 20-row spot check and relevance marks (45 min)"></div></div>
+      <div class="gl">Thursday sync <span class="who b">Together</span></div>
+      <div class="gtrack"><div class="gbar b recur" style="left:calc(0% + 4px);width:calc(100% - 8px)" tabindex="0" data-tip="Every week · Together · 30 minutes: numbers, decisions, next week&#x27;s priority"></div></div>
+    </div>
+  </div>
+  <p class="muted" style="color:var(--muted);font-size:.88rem">Weeks 52–53 (21 Dec – 1 Jan): holiday mode. The automatic runs continue; no project work or manual review is planned.</p>
+</section>
+
+<!-- 4 ============================================================ -->
+<section class="doc" id="week1">
+  <div class="tag"><span class="n">4</span>Week 1 checklist</div>
+  <h2>Monday 12 – Friday 16 October</h2>
+  <p class="section-lede">One week to get the engine running on its own. Everything here is small and concrete.</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="who p">Pogan</span>
+      <ul class="check" style="margin-top:10px">
+        <li><div><b>Agree the pending-companies decision with Seb first</b> (see right). The weekly full pipeline enriches every pending company, so it must not run before this.<span class="when">Mon</span></div></li>
+        <li><div><b>Add the daily jobs</b> in Heroku Scheduler: <code>python bulk_pipeline.py jobs</code> at 02:00 UTC and <code>python bulk_pipeline.py articles</code> at 03:00 UTC.<span class="when">Mon</span></div></li>
+        <li><div><b>Add the weekly trade-show run.</b> The Scheduler only offers daily, hourly or 10-minute jobs, so use a daily job with a Monday guard: <code>[ "$(date +%u)" = 1 ] &amp;&amp; python bulk_full_pipeline.py</code> at 04:00 UTC.<span class="when">Mon</span></div></li>
+        <li><div><b>Commit the smoke test</b> used on 9 October as <code>scripts/smoke_test.py</code> and run it after every deploy.<span class="when">Tue</span></div></li>
+        <li><div><b>Take a database backup</b>: <code>heroku pg:backups:capture -a hi-engineer-app</code>.<span class="when">Tue</span></div></li>
+        <li><div><b>Watch the first scheduled runs</b> on the Logs tab and confirm the spend line.<span class="when">Wed–Thu</span></div></li>
+        <li><div><b>Send the first Friday status</b> and export the four CSVs.<span class="when">Fri</span></div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="who s">Seb</span>
+      <ul class="check" style="margin-top:10px">
+        <li><div><b>Decide the 1,876 pending companies.</b> They came from the Excel with website and email already filled. Recommended: don't run paid enrichment on them (saves about $38); only the free news/jobs page probe.<span class="when">Mon</span></div></li>
+        <li><div><b>Airtable and Softr demos.</b> Bring the export schema and ask how each handles 3,000+ companies, weekly updates and public filtering.<span class="when">during the week</span></div></li>
+        <li><div><b>Open the review workbook</b> <code>docs/hi_engineer_review.xlsx</code> and start marking job and news categories relevant / not relevant.<span class="when">Wed</span></div></li>
+        <li><div><b>Agree this plan</b> at the first Thursday sync: dates, budget caps, who owns what.<span class="when">Thu</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 5 ============================================================ -->
+<section class="doc" id="rhythm">
+  <div class="tag"><span class="n">5</span>The weekly rhythm</div>
+  <h2>A week that runs itself</h2>
+  <p class="section-lede">Automation does the heavy lifting overnight. People spend about 4.5 hours a week in total, spread so nobody waits on anybody.</p>
+  <div class="week">
+    <div class="day">
+      <div class="dn">Monday</div><div class="dt">Fresh data day</div>
+      <div class="slot a"><b>Automatic · 02:00–05:00 UTC</b>Jobs, news, then the weekly trade-show scrape</div>
+      <div class="slot p"><b>Health check</b>All runs finished? Errors? Spend vs cap? Firecrawl balance?<span class="t">Pogan · 30 min</span></div>
+    </div>
+    <div class="day">
+      <div class="dn">Tuesday</div><div class="dt">Improve day</div>
+      <div class="slot a"><b>Automatic · 02:00–03:00</b>Daily jobs and news</div>
+      <div class="slot p"><b>One improvement</b>The week's priority; smoke test after any deploy<span class="t">Pogan · ~1.5 h</span></div>
+    </div>
+    <div class="day">
+      <div class="dn">Wednesday</div><div class="dt">Review day</div>
+      <div class="slot a"><b>Automatic · 02:00–03:00</b>Daily jobs and news</div>
+      <div class="slot s"><b>Data review</b>Dashboard numbers, 20-row spot check, relevance marks<span class="t">Seb · 45 min</span></div>
+    </div>
+    <div class="day">
+      <div class="dn">Thursday</div><div class="dt">Decide day</div>
+      <div class="slot a"><b>Automatic · 02:00–03:00</b>Daily jobs and news</div>
+      <div class="slot b"><b>Weekly sync</b>Numbers, decisions due, next week's single priority<span class="t">Together · 30 min</span></div>
+    </div>
+    <div class="day">
+      <div class="dn">Friday</div><div class="dt">Ship day</div>
+      <div class="slot a"><b>Automatic · 02:00–03:00</b>Daily jobs and news</div>
+      <div class="slot p"><b>Export &amp; status</b>CSVs to Airtable (automatic from W47); one-line status<span class="t">Pogan · 15 min</span></div>
+      <div class="slot s"><b>Use the data</b>Outreach lists, portal content<span class="t">Seb · as needed</span></div>
+    </div>
+  </div>
+
+  <h3>Monthly, on the first Thursday sync</h3>
+  <div class="grid g3">
+    <div class="card"><span class="who p">Pogan</span><h4 style="margin-top:8px">Prepare the month</h4><p>Spend per integration vs cap, the six target numbers, a fresh database backup.</p></div>
+    <div class="card"><span class="who s">Seb</span><h4 style="margin-top:8px">Approve the month</h4><p>Confirm next month's caps; approve or decline anything above them.</p></div>
+    <div class="card"><span class="who b">Together</span><h4 style="margin-top:8px">Adjust the plan</h4><p>Move timeline items if needed; one change at a time, written down.</p></div>
+  </div>
+
+  <h3>The Friday status, in one line</h3>
+  <div class="card" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.88rem; overflow-wrap:anywhere">
+    W43 · runs 7/7 OK · +41 companies, +63 jobs, +120 news · categorised 71% · contacts with email 14 · spend $3.10 of $35 · next: email pilot results
+  </div>
+  <p style="margin-top:8px;color:var(--text-2);font-size:.9rem">An example of the format; the numbers are illustrative.</p>
+</section>
+
+<!-- 6 ============================================================ -->
+<section class="doc" id="analysis">
+  <div class="tag"><span class="n">6</span>Data analysis</div>
+  <h2>Six numbers that tell us how we're doing</h2>
+  <p class="section-lede">The bar shows where we are today; the black line marks the target for 18 December. Hover either for details. The Dashboard shows the first five; the sixth comes from the Logs tab.</p>
+  <div class="chart">
+    <div class="goals">
+      <div class="goal"><div class="gn">Companies with a category</div><div class="track"><div class="now" style="width:63%" tabindex="0" data-tip="Today: 1,938 of 3,066 (63%)"></div><div class="target" style="left:90%" tabindex="0" data-tip="Target 90%: extend the category rules in W43–W44"></div></div><div class="gv">63% → 90%</div></div>
+      <div class="goal"><div class="gn">Jobs with a role tag</div><div class="track"><div class="now" style="width:31%" tabindex="0" data-tip="Today: 291 of 930 (31%), menu items included"></div><div class="target" style="left:70%" tabindex="0" data-tip="Target 70%: remove menu items, then add rules from Seb's marks"></div></div><div class="gv">31% → 70%</div></div>
+      <div class="goal"><div class="gn">News with a topic (noise excluded)</div><div class="track"><div class="now" style="width:24%" tabindex="0" data-tip="Today: 445 of 1,857 real items (24%)"></div><div class="target" style="left:50%" tabindex="0" data-tip="Target 50%: topic rules from Seb's relevance marks"></div></div><div class="gv">24% → 50%</div></div>
+      <div class="goal"><div class="gn">Contacts with an email</div><div class="track"><div class="now" style="width:1.8%" tabindex="0" data-tip="Today: 14 of 791 (2%)"></div><div class="target" style="left:45%" tabindex="0" data-tip="Target ~45% (350+): assumes the chosen tool finds about half — the pilot will confirm"></div></div><div class="gv">2% → 45%</div></div>
+      <div class="goal"><div class="gn">Companies in Airtable</div><div class="track"><div class="now" style="width:0" tabindex="0" data-tip="Today: none"></div><div class="target" style="left:100%;transform:translateX(-3px)" tabindex="0" data-tip="Target: all companies, refreshed every Friday from W47"></div></div><div class="gv">0 → all</div></div>
+      <div class="goal"><div class="gn">Weeks with every run on time</div><div class="track"><div class="now" style="width:0" tabindex="0" data-tip="Today: the schedule is off"></div><div class="target" style="left:100%;transform:translateX(-3px)" tabindex="0" data-tip="Target: 10 of 10 weeks, W42–W51"></div></div><div class="gv">0 → 10/10</div></div>
+    </div>
+    <div class="legend" style="margin-top:14px"><span><span class="sw" style="background:var(--pogan)"></span>Today (9 Oct)</span><span><span class="sw" style="background:var(--text);width:4px"></span>Target (18 Dec)</span></div>
+  </div>
+
+  <h3>How we look at the data each week</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Question</th><th>Where to look</th><th>Who</th><th>Healthy looks like</th></tr></thead>
+      <tbody>
+        <tr><td>Did everything run?</td><td data-l="Where">Logs tab: every run "finished"</td><td data-l="Who"><span class="who p">Pogan</span></td><td data-l="Healthy">7 daily runs per job + 1 weekly run, no errors</td></tr>
+        <tr><td>Is the directory growing?</td><td data-l="Where">Dashboard: Companies tile</td><td data-l="Who"><span class="who p">Pogan</span></td><td data-l="Healthy">Never drops; grows after trade-show and Excel updates</td></tr>
+        <tr><td>Is new data any good?</td><td data-l="Where">20 random new rows across Companies, Jobs, Articles</td><td data-l="Who"><span class="who s">Seb</span></td><td data-l="Healthy">At least 16 of 20 are real, relevant suppliers / jobs / news</td></tr>
+        <tr><td>Are the tags right?</td><td data-l="Where">Jobs and Articles filter chips, then 10 rows per chip</td><td data-l="Who"><span class="who s">Seb</span></td><td data-l="Healthy">At least 8 of 10 rows match their tag</td></tr>
+        <tr><td>Are we on budget?</td><td data-l="Where">Logs tab spend + provider dashboards</td><td data-l="Who"><span class="who p">Pogan</span></td><td data-l="Healthy">Month-to-date under the cap for each integration</td></tr>
+        <tr><td>Are we moving towards targets?</td><td data-l="Where">The six numbers above</td><td data-l="Who"><span class="who b">Together</span></td><td data-l="Healthy">Each one up, or flat with a reason</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 7 ============================================================ -->
+<section class="doc" id="usage">
+  <div class="tag"><span class="n">7</span>Data usage</div>
+  <h2>From raw scrape to real value</h2>
+  <p class="section-lede">The data is only worth collecting if it gets used. This is the path every record takes, and what each of us does with it.</p>
+  <div class="flow">
+    <div class="fstep"><span class="who p">Pogan</span><h4>Collect</h4><p>Schedule scrapes trade shows, jobs, news.</p></div>
+    <div class="fstep"><span class="who s">Seb</span><h4>Judge</h4><p>Relevance marks and spot checks.</p></div>
+    <div class="fstep"><span class="who p">Pogan</span><h4>Refine</h4><p>Marks become tagging rules.</p></div>
+    <div class="fstep"><span class="who p">Pogan</span><h4>Publish</h4><p>Friday export to Airtable.</p></div>
+    <div class="fstep"><span class="who s">Seb</span><h4>Use</h4><p>Portal, outreach, partners.</p></div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><div class="k">Supplier directory</div><h4 style="margin-top:6px">The guide itself</h4><p>Companies with a category, website and description go to the portal through Airtable. Only the 11 agreed categories are published.</p></div>
+    <div class="card"><div class="k">Contacts</div><h4 style="margin-top:6px">Outreach shortlists</h4><p>Filter Contacts by role (e.g. Project Manager) and "has email", then export the CSV. Contacts stay internal; they are not published.</p></div>
+    <div class="card"><div class="k">Jobs &amp; news</div><h4 style="margin-top:6px">Groundwork for 2027</h4><p>Tagged jobs and news build the history the jobs board and newsletter will launch with. Seb's tag list in W49–W50 sets their shape.</p></div>
+  </div>
+  <div class="callout info"><div class="ico info">i</div><div><p><b>Manual research keeps its place.</b> When Seb adds contacts or manufacturers to the master Excel, Pogan re-runs <code>import_excel.py</code>. It updates rather than duplicates, so the Excel and the app stay in sync.</p></div></div>
+</section>
+
+<!-- 8 ============================================================ -->
+<section class="doc" id="budget">
+  <div class="tag"><span class="n">8</span>Budget &amp; integrations</div>
+  <h2>Small, predictable, approved in advance</h2>
+  <p class="section-lede">Hosting is fixed. Every paid integration gets a monthly cap that Seb approves; Pogan reports against it every Monday. The estimates come from the costs recorded since May.</p>
+
+  <div class="chart">
+    <div class="chart-title">Expected spend per month</div>
+    <div class="chart-sub">Fixed hosting plus estimated integration spend. The Firecrawl subscription is tracked in credits (below), so it is not included here.</div>
+    <div class="cols">
+      <div class="col"><div class="cv">≈ $23</div><div class="stackv" style="height:58%"><div class="seg fixed" style="height:52%" tabindex="0" data-tip="October · Heroku hosting $12"></div><div class="seg var" style="height:48%" tabindex="0" data-tip="October · Contact-email pilot ≈ $10 (capped at $25) + new-company enrichment ≈ $1"></div></div></div>
+      <div class="col"><div class="cv">≈ $15</div><div class="stackv" style="height:38%"><div class="seg fixed" style="height:80%" tabindex="0" data-tip="November · Heroku hosting $12"></div><div class="seg var" style="height:20%" tabindex="0" data-tip="November · New-company enrichment ≈ $3"></div></div></div>
+      <div class="col"><div class="cv">≈ $29</div><div class="stackv" style="height:73%"><div class="seg fixed" style="height:41%" tabindex="0" data-tip="December · Heroku hosting $12"></div><div class="seg var" style="height:59%" tabindex="0" data-tip="December · Contact-email roll-out ≈ $15 + new-company enrichment ≈ $2"></div></div></div>
+    </div>
+    <div class="col-labels"><span>October</span><span>November</span><span>December</span></div>
+    <div class="legend" style="margin-top:12px"><span><span class="sw" style="background:var(--pogan)"></span>Hosting (fixed)</span><span><span class="sw" style="background:var(--seb)"></span>Integrations (estimate)</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Integration</th><th>Used for</th><th>Basis</th><th class="num">Expected Q4</th><th class="num">Proposed cap</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Heroku</td><td data-l="Used for">Web app, database, scheduler</td><td data-l="Basis">$7 dyno + $5 Postgres a month; scheduler free</td><td class="num" data-l="Expected">$36</td><td class="num" data-l="Cap">fixed</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>IcyPeas</td><td data-l="Used for">New-company enrichment; contact emails if chosen</td><td data-l="Basis">$0.019 per credit; ≈ $0.02 per company</td><td class="num" data-l="Expected">≈ $6</td><td class="num" data-l="Cap">$10 / month</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>Apollo</td><td data-l="Used for">Fallback enrichment; pilot candidate for emails</td><td data-l="Basis">1 credit per call; ≈ $0.05 assumed — check the plan</td><td class="num" data-l="Expected">in the pilot</td><td class="num" data-l="Cap">inside pilot cap</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>Contact-email pilot</td><td data-l="Used for">50 contacts through 2 tools (e.g. Apollo vs Clay or IcyPeas)</td><td data-l="Basis">Per each tool's pricing</td><td class="num" data-l="Expected">≈ $10</td><td class="num" data-l="Cap">$25 once</td><td data-l="Owner"><span class="who b">Together</span></td></tr>
+        <tr><td>Contact-email roll-out</td><td data-l="Used for">The remaining ~730 contacts</td><td data-l="Basis">≈ $15 via IcyPeas email search ($0.019 each); more for a pricier tool</td><td class="num" data-l="Expected">≈ $15</td><td class="num" data-l="Cap">$40 once</td><td data-l="Owner"><span class="who b">Together</span></td></tr>
+        <tr><td>Firecrawl</td><td data-l="Used for">9 JavaScript trade shows weekly; 5 media portals from W47</td><td data-l="Basis">≈ 40 credits/month now, ≈ 60 with portals, of a 1,000-credit plan</td><td class="num" data-l="Expected">subscription</td><td class="num" data-l="Cap">review 23 Oct</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>FullEnrich, AI Ark</td><td data-l="Used for">—</td><td data-l="Basis">Switched off</td><td class="num" data-l="Expected">$0</td><td class="num" data-l="Cap">$0</td><td data-l="Owner">—</td></tr>
+        <tr class="total"><td>Total</td><td data-l="Used for">12 Oct – 31 Dec</td><td data-l="Basis">Hosting + integrations</td><td class="num" data-l="Expected">≈ $67</td><td class="num" data-l="Cap">≤ $131</td><td data-l="Owner"><span class="who s">Seb approves</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="callout good"><div class="ico good">✓</div><div><p><b>Savings already in the plan.</b> Skipping paid enrichment on the 1,876 Excel imports saves about $38. Firecrawl usage is about 5% of the plan, so the 23 October renewal is a chance to move to a smaller plan if one fits.</p></div></div>
+    <div class="callout warn"><div class="ico warn">!</div><div><p><b>One accounting fix.</b> The Logs tab prices Apollo at the IcyPeas rate and shows about half the real spend. Until Pogan fixes this (W43), budget reports use the provider dashboards.</p></div></div>
+  </div>
+  <h3>Spending rules</h3>
+  <ul class="clean">
+    <li>Any single run expected to cost more than <b>$10</b> needs a yes from Seb first.</li>
+    <li>Pilots run on a small sample and are capped before they start.</li>
+    <li>If a month reaches 80% of a cap, Pogan pauses that integration and raises it at the Thursday sync.</li>
+  </ul>
+</section>
+
+<!-- 9 ============================================================ -->
+<section class="doc" id="testing">
+  <div class="tag"><span class="n">9</span>Testing</div>
+  <h2>Confidence at every layer</h2>
+  <p class="section-lede">Four kinds of checks, from automatic to human. Together they catch problems before the portal or an outreach list ever sees them.</p>
+  <div class="grid g4">
+    <div class="card"><span class="who p">Pogan</span><h4 style="margin-top:8px">After every deploy</h4><p>Smoke test: every page loads, counts and filters correct, exports complete. Then a look at desktop and phone.</p></div>
+    <div class="card"><span class="who p">Pogan</span><h4 style="margin-top:8px">Every Monday</h4><p>All runs finished; row counts never drop; no duplicate contacts; spend under cap.</p></div>
+    <div class="card"><span class="who s">Seb</span><h4 style="margin-top:8px">Every Wednesday</h4><p>20-row spot check and 10-row tag check. Problems go into the Thursday sync.</p></div>
+    <div class="card"><span class="who b">Together</span><h4 style="margin-top:8px">Every pilot</h4><p>Same 50 contacts through each tool; compare hit rate, accuracy and cost per email before choosing.</p></div>
+  </div>
+  <h3>Pass marks</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Check</th><th>Passes when</th><th>If it fails</th></tr></thead>
+      <tbody>
+        <tr><td>Smoke test</td><td data-l="Passes">All pages return 200; filters and paging give the expected totals</td><td data-l="If it fails">Roll back: <code>heroku releases:rollback -a hi-engineer-app</code></td></tr>
+        <tr><td>Scheduled runs</td><td data-l="Passes">Every run in the week shows "finished"</td><td data-l="If it fails">Re-run by hand from the app; investigate before the next night</td></tr>
+        <tr><td>Data volume</td><td data-l="Passes">Companies, contacts, jobs and news never shrink</td><td data-l="If it fails">Stop the schedule; restore from the latest backup if needed</td></tr>
+        <tr><td>Spot check</td><td data-l="Passes">16 of 20 new rows are real and relevant</td><td data-l="If it fails">Pogan tightens the source or the noise filter that week</td></tr>
+        <tr><td>Tag check</td><td data-l="Passes">8 of 10 rows match their tag</td><td data-l="If it fails">Seb's corrections become new rules</td></tr>
+        <tr><td>Email pilot</td><td data-l="Passes">At least 50% found, at least 90% of found emails valid</td><td data-l="If it fails">Try the second tool, or keep emails manual for priority roles</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 10 =========================================================== -->
+<section class="doc" id="risks">
+  <div class="tag"><span class="n">10</span>Risks</div>
+  <h2>What could slow us down — and the plan for each</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Risk</th><th>Early sign</th><th>Response</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>A weekly run spends unexpectedly</td><td data-l="Early sign">Monday spend line above $10</td><td data-l="Response">Pending decision made in W42; $10 approval rule; Monday check</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>Contact tools find few emails</td><td data-l="Early sign">Pilot hit rate under 50%</td><td data-l="Response">Try the second tool; focus manual research on priority roles</td><td data-l="Owner"><span class="who b">Together</span></td></tr>
+        <tr><td>A trade-show site changes layout</td><td data-l="Early sign">A source's exhibitor count drops to 0</td><td data-l="Response">Fix the parser that week; other sources keep running</td><td data-l="Owner"><span class="who p">Pogan</span></td></tr>
+        <tr><td>Portal decision takes longer</td><td data-l="Early sign">No route chosen by 13 Nov</td><td data-l="Response">Airtable export goes ahead anyway; it serves either route</td><td data-l="Owner"><span class="who s">Seb</span></td></tr>
+        <tr><td>Review time gets squeezed</td><td data-l="Early sign">Two missed Wednesday reviews</td><td data-l="Response">Shrink to a 10-row check; keep the Thursday sync</td><td data-l="Owner"><span class="who s">Seb</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11 =========================================================== -->
+<section class="doc" id="after">
+  <div class="tag"><span class="n">11</span>After December</div>
+  <h2>Where this leads in 2027</h2>
+  <p class="section-lede">With a clean Netherlands directory, a weekly routine and known costs, the next steps from the strategy become straightforward to start.</p>
+  <div class="grid g3">
+    <div class="card"><div class="k">Q1 2027</div><h4 style="margin-top:6px">Jobs board</h4><p>Launch with the role list Seb defines in December; jobs are already tagged by role every day.</p></div>
+    <div class="card"><div class="k">Q1 2027</div><h4 style="margin-top:6px">News</h4><p>Newsletter on beehiiv or circle using the agreed tags and the news history collected since May.</p></div>
+    <div class="card"><div class="k">2027</div><h4 style="margin-top:6px">Next country</h4><p>Repeat the playbook: new source list, same engine, same weekly rhythm.</p></div>
+  </div>
+  <div class="footer">
+    Hi-Engineer roadmap · written 9 October 2026 from the live system · companion to
+    <code>docs/hi_engineer_documentation.html</code>. Costs are estimates from usage since May 2026;
+    caps are proposals for Seb to approve.
+  </div>
+</section>
+
+</main>
+</div>
+<div id="tip" role="tooltip"></div>
+<script>
+(function () {
+  var tip = document.getElementById('tip');
+  function show(el, x, y) {
+    tip.textContent = el.getAttribute('data-tip'); tip.classList.add('on');
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(Math.max(8, x - w / 2), window.innerWidth - w - 8) + 'px';
+    var top = y - h - 12; tip.style.top = (top < 8 ? y + 16 : top) + 'px';
+  }
+  function hide() { tip.classList.remove('on'); }
+  document.querySelectorAll('[data-tip]').forEach(function (el) {
+    el.addEventListener('mousemove', function (e) { show(el, e.clientX, e.clientY); });
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', function () { var r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); });
+    el.addEventListener('blur', hide);
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+
+  var links = [].slice.call(document.querySelectorAll('.toc a')), byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (en) { if (en.isIntersecting) { links.forEach(function (a) { a.classList.remove('active'); }); var a = byId[en.target.id]; if (a) a.classList.add('active'); } });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section.doc').forEach(function (s) { io.observe(s); });
+  }
+
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('hi-roadmap-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark'; root.setAttribute('data-theme', next);
+    try { localStorage.setItem('hi-roadmap-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
