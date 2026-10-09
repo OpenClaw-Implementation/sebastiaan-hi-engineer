@@ -163,3 +163,18 @@ git push heroku main
 ```bash
 heroku releases:rollback -a hi-engineer-app
 ```
+
+## UI conventions (2026-10-09)
+- Header (`base.html`): two rows — brand + account, then the five nav groups
+  (label above, tabs in `.nav-tabs`). Under 760px the groups collapse behind a
+  `.nav-toggle` "Menu · <page>" button (tiny inline script toggles `.nav-open`).
+- Lists use `app._paginate(rows)` + `templates/_pager.html` (100 per page; links
+  keep the other query args). Used by Contacts, Jobs, Articles; Companies has its
+  own equivalent.
+- Template filters: `role_label`, `topic_label` (slug → human label, incl.
+  `unclassified`), `pct(part, whole)` (rounded %).
+- DB access from routes must go through `db.*` helpers built on `db._run`
+  (reconnects dropped connections, degrades on outage). `dashboard_kpis`,
+  `tag_counts`, `export_rows` exist for the new pages.
+- CSV export escapes formula-like cells (= + - @) except digit-only values.
+- "Enrich all pending" asks for confirmation with count + estimated cost.

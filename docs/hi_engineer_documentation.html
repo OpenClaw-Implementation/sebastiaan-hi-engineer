@@ -354,7 +354,7 @@ details.more > div { padding: 0 16px 14px; }
     <div class="card">
       <h4>What needs attention</h4>
       <ul class="clean">
-        <li>The redesigned interface is built and tested but <b>not yet deployed</b>.</li>
+        <li>The redesigned interface went live on 9 October (release v41); the daily schedule is still off.</li>
         <li><b>No pipeline has run since 16 July</b> — the daily schedule is not active.</li>
         <li>Only 14 of 791 contacts have an email address.</li>
         <li>The media-portal scraper produces nothing yet (all 9 portals block or need JavaScript).</li>
@@ -487,7 +487,7 @@ details.more > div { padding: 0 16px 14px; }
   <p class="section-lede">
     The redesigned interface groups the tabs into five sections that follow the
     pipeline from left to right. Tabs marked <span class="tabchip new">blue</span>
-    are new in the redesign, which is not yet deployed (see <a href="#deployed">section 5</a>).
+    were added in the October redesign (live since release v41).
   </p>
 
   <div class="navmap">
@@ -527,10 +527,10 @@ details.more > div { padding: 0 16px 14px; }
         <tr><td><b>Scraping Engine</b></td><td>The 26 trade-show source URLs, the parser each uses, when it last ran and how many exhibitors it found</td><td>Add or remove a source, scrape one source, scrape all</td></tr>
         <tr><td><b>Content Engine</b></td><td>The 9 media portals and what each returned</td><td>Scrape all portals</td></tr>
         <tr><td><b>Companies</b></td><td>17 fields per supplier, 100 per page, with category and enrichment-status chips</td><td>Filter by category or status, enrich one company, enrich all pending</td></tr>
-        <tr><td><b>Contacts</b></td><td>People with title, company, role tag, email and LinkedIn link</td><td>Filter by role (engineering roles first) and by "has email"</td></tr>
+        <tr><td><b>Contacts</b></td><td>People with title, company, role tag, email and LinkedIn link, 100 per page</td><td>Filter by role (engineering roles first) and by "has email"</td></tr>
         <tr><td><b>Taxonomy</b></td><td>The 11 top-level categories, their 22 sub-categories, and how many companies sit in each</td><td>Jump to the companies in a category</td></tr>
         <tr><td><b>Jobs</b></td><td>Job titles with company, role tag and date found</td><td>Filter by role, date, company; run the jobs pipeline</td></tr>
-        <tr><td><b>Articles</b></td><td>News titles with company, topic tag and date found</td><td>Filter by topic, date, company; run the articles pipeline</td></tr>
+        <tr><td><b>Articles</b></td><td>News titles with company, topic tag and date found; navigation noise hidden by default</td><td>Filter by topic, date, company; run the articles pipeline</td></tr>
         <tr><td><b>Export</b></td><td>Download buttons</td><td>Get Companies / Contacts / Jobs / Articles as CSV, or the Airtable base schema as JSON</td></tr>
         <tr><td><b>Stats</b></td><td>Enrichment results per provider, field fill rates, top industries and locations, 14-day cost</td><td>Switch the time window (24 h, 7 d, 30 d, all)</td></tr>
         <tr><td><b>Logs</b></td><td>A live feed of every step of the latest run, run history, total spend</td><td>Open any past run to see every step and every company it touched</td></tr>
@@ -751,20 +751,20 @@ details.more > div { padding: 0 16px 14px; }
   <div class="stage-tag"><span class="n">5</span>What is deployed</div>
   <h2>Live versus local</h2>
   <p class="section-lede">
-    The code and the data are in different states. The database already contains
-    everything described above. The website people see still runs the July version
-    of the code.
+    Since 9 October the code and the data are in step: the redesigned interface is
+    live (release v41) and the database holds everything described above. The one
+    thing not running is the daily schedule.
   </p>
 
   <div class="table-wrap">
     <table>
       <thead><tr><th>Component</th><th>Where it is</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td><b>Web app (live)</b><br><span class="muted">release v38, commit <code>bd450e6</code>, 16 July 2026</span></td><td>Heroku, one Basic web dyno, 3 worker processes</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
+        <tr><td><b>Web app (live)</b><br><span class="muted">release v41, 9 October 2026</span></td><td>Heroku, one Basic web dyno, 3 worker processes</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
         <tr><td><b>Database</b><br><span class="muted">Postgres essential-0</span></td><td>Heroku add-on</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
         <tr><td><b>New tables and columns</b><br><span class="muted">contacts, taxonomy, category / role / topic tags</span></td><td>Created in production on 8 October</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live in database</span></td></tr>
         <tr><td><b>Excel import + tagging</b><br><span class="muted">1,876 companies, 791 contacts, tags on jobs and news</span></td><td>Written to production on 8–9 October</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live in database</span></td></tr>
-        <tr><td><b>Redesigned interface</b><br><span class="muted">Dashboard, Contacts, Taxonomy, Export, grouped navigation, filters, pagination</span></td><td>Local working copy only; not committed or pushed</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Not deployed</span></td></tr>
+        <tr><td><b>Redesigned interface</b><br><span class="muted">Dashboard, Contacts, Taxonomy, Export, grouped navigation, filters, pagination</span></td><td>Deployed 9 October (v39 → v41 after audit fixes)</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
         <tr><td><b>Daily schedule</b><br><span class="muted">Heroku Scheduler add-on</span></td><td>Add-on installed; no run recorded since 16 July</td><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>Not running</span></td></tr>
       </tbody>
     </table>
@@ -773,15 +773,12 @@ details.more > div { padding: 0 16px 14px; }
   <div class="callout warn">
     <svg width="18" height="18" style="color:var(--warn)"><use href="#i-warn"/></svg>
     <div>
-      <p><b>Two things to know before using the live site.</b></p>
-      <p>1. The live Companies tab has no pagination and now loads all 3,066 rows (about 4 MB), so it is slow.</p>
-      <p>2. The live "Enrich all pending" button would now run the paid chain over the 1,876 imported companies. At past rates that is roughly $38. Those companies already have most fields from the Excel, so this is probably not wanted yet (see <a href="#costs">section 8</a>).</p>
+      <p><b>Before pressing "Enrich all pending".</b> It runs the paid chain over the 1,876 imported companies, roughly $38 at past rates. Those companies already have most fields from the Excel, so this is probably not wanted yet (see <a href="#costs">section 8</a>). The button now asks for confirmation and shows the count and estimate.</p>
     </div>
   </div>
 
-  <h3>How to deploy the redesign</h3>
-  <p>From the repository folder, after reviewing the changes:</p>
-  <p><code>git add -A &amp;&amp; git commit -m "EPCM pilot revamp" &amp;&amp; git push heroku main</code></p>
+  <h3>How to deploy a change</h3>
+  <p>From the repository folder, commit the change and push: <code>git push heroku main</code>.</p>
   <p>The database needs nothing further: tables are created automatically when the app starts, and that step is safe to repeat. To undo a bad deploy: <code>heroku releases:rollback -a hi-engineer-app</code>.</p>
 
   <h3>Configuration</h3>
@@ -1081,10 +1078,9 @@ details.more > div { padding: 0 16px 14px; }
       <thead><tr><th>Gap</th><th>Effect</th><th>Fix</th></tr></thead>
       <tbody>
         <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Schedule not running</b></td><td>No new jobs, news or exhibitors since 16 July</td><td>Add the two daily jobs in Heroku Scheduler</td></tr>
-        <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Redesign not deployed</b></td><td>The live site is slow on Companies and lacks Contacts, Taxonomy and Export</td><td>Commit and push (section 5)</td></tr>
-        <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Contact emails</b></td><td>777 of 791 contacts have no email</td><td>Pick the contact tool (Apollo, Clay, IcyPeas email search) and run it on a sample first</td></tr>
+                <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Contact emails</b></td><td>777 of 791 contacts have no email</td><td>Pick the contact tool (Apollo, Clay, IcyPeas email search) and run it on a sample first</td></tr>
         <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Uncategorised companies</b></td><td>1,128 companies (37%) have no canonical category</td><td>Richer mapping rules, then a bulk re-tag screen</td></tr>
-        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Role and topic coverage</b></td><td>69% of jobs and 61% of news have no tag; a fifth of news items are buttons or dates</td><td>Filter navigation text at extraction; extend the rules</td></tr>
+        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Role and topic coverage</b></td><td>69% of jobs and 61% of news have no tag; a fifth of news items are buttons or dates, and job-board menu items (e.g. "Zoek een nieuwe baan") are stored as jobs</td><td>Filter navigation text at extraction; extend the rules</td></tr>
         <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Media portals</b></td><td>0 of 9 portals produce companies</td><td>Route the 5 JavaScript portals through Firecrawl</td></tr>
         <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Two Firecrawl shows return 0</b></td><td>ESEF (a hub page) and Maintenance NEXT (likely a consent wall)</td><td>Site-specific handling</td></tr>
         <tr><td><span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Low</span><br><b>Cost display</b></td><td>Logs tab under-reports Apollo spend</td><td>Store provider-specific prices in <code>costs.py</code></td></tr>
@@ -1107,7 +1103,7 @@ details.more > div { padding: 0 16px 14px; }
   <div class="stage-tag"><span class="n">10</span>What comes next</div>
   <h2>Suggested order of work</h2>
   <div class="roadmap">
-    <div class="rm-step now"><div class="when">Step 1</div><h4>Deploy and schedule</h4><p>Push the redesign; switch on the daily jobs and articles runs and a weekly trade-show scrape.</p></div>
+    <div class="rm-step now"><div class="when">Step 1</div><h4>Switch on the schedule</h4><p>Add the daily jobs and articles runs and a weekly trade-show scrape in Heroku Scheduler.</p></div>
     <div class="rm-step"><div class="when">Step 2</div><h4>Contacts tool</h4><p>Choose between Apollo and Clay on a 50-contact sample; measure email hit rate and cost per email.</p></div>
     <div class="rm-step"><div class="when">Step 3</div><h4>Clean categories and tags</h4><p>Assign the 1,128 uncategorised companies; remove navigation noise from jobs and news.</p></div>
     <div class="rm-step"><div class="when">Step 4</div><h4>Airtable / Softr</h4><p>After the demos, create the base from the exported schema and load the CSVs.</p></div>
