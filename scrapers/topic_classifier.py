@@ -38,7 +38,8 @@ TOPIC_LABELS: dict[str, str] = {
     "webinar_training":   "Webinar / training",
     "regulation_policy":  "Regulation / policy",
     "blog_update":        "Blog / update",
-    "nav_residue":        "Nav residue (noise)",
+    "nav_residue":        "Navigation noise",
+    "unclassified":       "No topic matched",
 }
 
 TOPIC_RULES: list[tuple[str, re.Pattern]] = [

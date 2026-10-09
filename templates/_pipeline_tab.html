@@ -30,8 +30,8 @@
           Role buckets are the same across Jobs + Contacts, so you can jump
           from a filtered Jobs view directly to the matching Contacts list.
         {% else %}
-          Topic tags appear here once articles are classified (cycle 4
-          work in progress). "Unclassified" is the default state.
+          Each news item is tagged with a topic from its title. "Navigation
+          noise" (read-more buttons, dates) is hidden unless you pick that chip.
         {% endif %}
       </p>
     </div>
@@ -47,6 +47,8 @@
     <a class="chip{{ ' chip-active' if since=='24h' }}" href="{{ tab_url }}?since=24h&company={{ company_q }}">Last 24 h</a>
     <form method="get" action="{{ tab_url }}" style="display:inline">
       <input type="hidden" name="since" value="{{ since }}">
+      {% if current_role %}<input type="hidden" name="role" value="{{ current_role }}">{% endif %}
+      {% if current_topic %}<input type="hidden" name="topic" value="{{ current_topic }}">{% endif %}
       <input class="btn btn-small" type="text" name="company" value="{{ company_q }}" placeholder="company search…" style="width:180px">
     </form>
   </div>
@@ -72,7 +74,7 @@
 </section>
 
 <section class="panel">
-  <h3>{{ items|length }} items shown</h3>
+  {% include '_pager.html' %}
   <table class="data-table">
     <thead>
       <tr>
@@ -96,9 +98,9 @@
           </td>
           <td>
             {% if kind == 'jobs' and it.role_bucket %}
-              <span class="chip">{{ it.role_bucket.replace('_', ' ') }}</span>
+              <span class="chip">{{ it.role_bucket | role_label }}</span>
             {% elif kind == 'articles' and it.topic_tag %}
-              <span class="chip">{{ it.topic_tag.replace('_', ' ') }}</span>
+              <span class="chip">{{ it.topic_tag | topic_label }}</span>
             {% else %}
               <span class="muted small">—</span>
             {% endif %}
@@ -113,6 +115,7 @@
       {% endfor %}
     </tbody>
   </table>
+  {% include '_pager.html' %}
 </section>
 
 <script>

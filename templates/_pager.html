@@ -1,0 +1,13 @@
+{# Pager bar. Requires `pager` from app._paginate(). #}
+<div class="pager">
+  <span class="muted small">
+    {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ "{:,}".format(pager.total) }}{% else %}Nothing matches these filters{% endif %}
+  </span>
+  {% if pager.pages > 1 %}
+    <span class="pager-links">
+      {% if pager.prev_url %}<a class="chip" href="{{ pager.prev_url }}">← Prev</a>{% endif %}
+      <span class="chip">page {{ pager.page }} / {{ pager.pages }}</span>
+      {% if pager.next_url %}<a class="chip" href="{{ pager.next_url }}">Next →</a>{% endif %}
+    </span>
+  {% endif %}
+</div>

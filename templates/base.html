@@ -12,36 +12,44 @@
       hi&#8209;engineer<span class="brand-dot">.</span>
       <span class="brand-sub">EPCM Guide · Netherlands pilot</span>
     </a>
-    <nav class="nav-groups" aria-label="Primary">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+      Menu<span class="nav-toggle-current">{{ self.title() }}</span>
+    </button>
+    <nav class="nav-groups" id="primary-nav" aria-label="Primary">
       <div class="nav-group">
         <div class="nav-group-label">Overview</div>
-        <a class="tab {{ 'active' if active == 'dashboard' }}" href="{{ url_for('dashboard') }}" title="Pipeline health at a glance">Dashboard</a>
+        <div class="nav-tabs">
+        <a class="tab {{ 'active' if active == 'dashboard' }}" href="{{ url_for('dashboard') }}" title="Pipeline health at a glance">Dashboard</a></div>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-label">Ingest</div>
+        <div class="nav-tabs">
         <a class="tab {{ 'active' if active == 'scraping' }}" href="{{ url_for('scraping_engine') }}" title="Trade-show exhibitor scraping">Scraping Engine</a>
-        <a class="tab {{ 'active' if active == 'content' }}" href="{{ url_for('content_engine') }}" title="Industrial media portal scraping">Content Engine</a>
+        <a class="tab {{ 'active' if active == 'content' }}" href="{{ url_for('content_engine') }}" title="Industrial media portal scraping">Content Engine</a></div>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-label">Directory</div>
+        <div class="nav-tabs">
         <a class="tab {{ 'active' if active == 'companies' }}" href="{{ url_for('companies') }}" title="Supplier directory + enrichment">Companies</a>
         <a class="tab {{ 'active' if active == 'contacts' }}" href="{{ url_for('contacts') }}" title="Role-tagged contacts">Contacts</a>
-        <a class="tab {{ 'active' if active == 'taxonomy' }}" href="{{ url_for('taxonomy_page') }}" title="Canonical EPCM taxonomy">Taxonomy</a>
+        <a class="tab {{ 'active' if active == 'taxonomy' }}" href="{{ url_for('taxonomy_page') }}" title="Canonical EPCM taxonomy">Taxonomy</a></div>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-label">Content</div>
+        <div class="nav-tabs">
         <a class="tab {{ 'active' if active == 'jobs' }}" href="{{ url_for('jobs') }}" title="Jobs feed with role filtering">Jobs</a>
-        <a class="tab {{ 'active' if active == 'articles' }}" href="{{ url_for('articles') }}" title="News feed with topic tagging">Articles</a>
+        <a class="tab {{ 'active' if active == 'articles' }}" href="{{ url_for('articles') }}" title="News feed with topic tagging">Articles</a></div>
       </div>
 
       <div class="nav-group">
         <div class="nav-group-label">Operations</div>
+        <div class="nav-tabs">
         <a class="tab {{ 'active' if active == 'export' }}" href="{{ url_for('export_page') }}" title="Airtable + CSV export">Export</a>
         <a class="tab {{ 'active' if active == 'stats' }}" href="{{ url_for('stats') }}" title="Analytics dashboard">Stats</a>
-        <a class="tab {{ 'active' if active == 'logs' }}" href="{{ url_for('logs') }}" title="Run history + costs">Logs</a>
+        <a class="tab {{ 'active' if active == 'logs' }}" href="{{ url_for('logs') }}" title="Run history + costs">Logs</a></div>
       </div>
     </nav>
     {% if current_user %}
@@ -74,6 +82,15 @@
     {% block content %}{% endblock %}
   </main>
 
+  <script>
+    (function () {
+      var btn = document.querySelector('.nav-toggle'), bar = document.querySelector('.topbar');
+      if (btn) btn.addEventListener('click', function () {
+        var open = bar.classList.toggle('nav-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    })();
+  </script>
   <footer class="footer">
     Direct cURL scraping · EPCM Guide (Netherlands pilot) · <a href="{{ url_for('dashboard') }}">overview</a>
   </footer>

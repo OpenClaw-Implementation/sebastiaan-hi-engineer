@@ -54,6 +54,23 @@ db.init_db()
 app.before_request(auth.before_request_guard)
 
 
+@app.template_filter("role_label")
+def _role_label(slug):
+    from scrapers.role_classifier import ROLE_LABELS
+    return ROLE_LABELS.get(slug or "unclassified", (slug or "").replace("_", " "))
+
+
+@app.template_filter("topic_label")
+def _topic_label(slug):
+    from scrapers.topic_classifier import TOPIC_LABELS
+    return TOPIC_LABELS.get(slug or "unclassified", (slug or "").replace("_", " "))
+
+
+@app.template_filter("pct")
+def _pct(part, whole):
+    return round(100 * part / whole) if whole else 0
+
+
 @app.context_processor
 def _inject_db_health():
     """Expose the DB health flag and current user to every template."""
@@ -128,6 +145,32 @@ def index():
     return redirect(url_for("dashboard"))
 
 
+def _paginate(rows: list, per_page: int = 100) -> dict:
+    """Slice ``rows`` for the ?page= query arg. Returns the page rows plus
+    everything templates/_pager.html needs (links keep the other query args)."""
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    total = len(rows)
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, pages)
+    start = (page - 1) * per_page
+
+    def url(n: int) -> str:
+        args = request.args.to_dict()
+        args["page"] = n
+        return url_for(request.endpoint, **(request.view_args or {}), **args)
+
+    return {
+        "rows": rows[start:start + per_page], "page": page, "pages": pages,
+        "total": total, "first": start + 1 if total else 0,
+        "last": min(start + per_page, total),
+        "prev_url": url(page - 1) if page > 1 else None,
+        "next_url": url(page + 1) if page < pages else None,
+    }
+
+
 # --------------------------------------------------------------------------- #
 # Dashboard — one-glance pipeline health, aimed at a first-time viewer.
 # Each tile is captioned so someone opening the page cold can read it top to
@@ -172,7 +215,8 @@ def contacts():
         has_email = True
     elif has_email_arg == "0":
         has_email = False
-    rows = db.list_contacts(role_bucket=role, has_email=has_email, limit=500)
+    rows = db.list_contacts(role_bucket=role, has_email=has_email)
+    pager = _paginate(rows)
     counts = db.count_contacts()
 
     # Build role filter rail (priority first, then alphabetical by label)
@@ -194,7 +238,8 @@ def contacts():
     return render_template(
         "contacts.html",
         active="contacts",
-        rows=rows,
+        rows=pager["rows"],
+        pager=pager,
         counts=counts,
         role_chips=role_chips,
         current_role=role,
@@ -754,16 +799,13 @@ def _pipeline_view(kind: str, template: str):
     company_q = (request.args.get("company") or "").strip() or None
     role_arg = request.args.get("role") or None
     topic_arg = request.args.get("topic") or None
-    company_id = None
-    if company_q:
-        for c in db.list_companies():
-            if company_q.lower() in c["name"].lower():
-                company_id = c["id"]; break
-
-    # Pull items + apply post-filter for role (jobs) / topic (articles)
-    items = (db.list_jobs(company_id=company_id, since=since, limit=5000)
+    # Pull items + apply post-filters (company substring, role, topic)
+    items = (db.list_jobs(since=since, limit=20000)
              if kind == "jobs"
-             else db.list_articles(company_id=company_id, since=since, limit=5000))
+             else db.list_articles(since=since, limit=20000))
+    if company_q:
+        q = company_q.lower()
+        items = [it for it in items if q in (it.get("company") or "").lower()]
     if kind == "jobs" and role_arg:
         if role_arg == "unclassified":
             items = [it for it in items if not it.get("role_bucket")]
@@ -774,6 +816,10 @@ def _pipeline_view(kind: str, template: str):
             items = [it for it in items if not it.get("topic_tag")]
         else:
             items = [it for it in items if it.get("topic_tag") == topic_arg]
+    elif kind == "articles":
+        # "Read more" buttons and dates are hidden unless asked for explicitly.
+        items = [it for it in items if it.get("topic_tag") != "nav_residue"]
+    pager = _paginate(items)
 
     # Role / topic chip rails
     chips = []
@@ -802,7 +848,8 @@ def _pipeline_view(kind: str, template: str):
     return render_template(
         template, active=kind,
         summary=db.pipeline_summary(kind),
-        items=items[:500],
+        items=pager["rows"],
+        pager=pager,
         since=since_key,
         company_q=company_q or "",
         chips=chips,

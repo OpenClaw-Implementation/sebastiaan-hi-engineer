@@ -6,10 +6,11 @@
   <div class="trail">Directory · Taxonomy</div>
   <h1>Canonical EPCM taxonomy</h1>
   <p>
-    The ten top-level categories drive filtering across the Companies, Jobs
-    and Articles tabs — and are the only categories that make it into the
-    public portal. {{ unassigned }} companies are not yet mapped; use the
-    Companies tab to re-tag them.
+    These eleven top-level categories are the ones the public portal will use,
+    and they power the category filter on the Companies tab. Each company's
+    original free-text category is kept alongside. {{ "{:,}".format(unassigned) }}
+    companies are not mapped yet — their free-text category matched none of the
+    keyword rules in <code>taxonomy.py</code>.
   </p>
 </section>
 

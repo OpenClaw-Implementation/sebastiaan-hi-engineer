@@ -82,6 +82,7 @@ ROLE_LABELS: dict[str, str] = {
     "admin_office":                "Admin / Office",
     "project_other":               "Project (other)",
     "freelance":                   "Freelance",
+    "unclassified":                "No role matched",
 }
 
 

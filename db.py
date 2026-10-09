@@ -1675,7 +1675,9 @@ def list_contacts(role_bucket: str | None = None,
 
     where = []
     params: list = []
-    if role_bucket:
+    if role_bucket == "unclassified":
+        where.append("c.role_bucket is null")
+    elif role_bucket:
         where.append("c.role_bucket = %s"); params.append(role_bucket)
     if company_id is not None:
         where.append("c.company_id = %s"); params.append(company_id)
@@ -1787,7 +1789,7 @@ def companies_by_canonical() -> list[dict]:
 # --------------------------------------------------------------------------- #
 _KPI_KEYS = ("c_total", "c_email", "c_site", "c_news", "c_jobs", "c_canonical",
              "jobs_total", "jobs_classified", "art_total", "runs_total",
-             "src_active")
+             "src_active", "art_tagged", "art_noise")
 
 
 def dashboard_kpis() -> dict:
@@ -1808,7 +1810,9 @@ def dashboard_kpis() -> dict:
               (select count(*) from jobs where role_bucket is not null),
               (select count(*) from articles),
               (select count(*) from scrape_runs),
-              (select count(*) from event_sources where active)
+              (select count(*) from event_sources where active),
+              (select count(*) from articles where topic_tag is not null and topic_tag <> 'nav_residue'),
+              (select count(*) from articles where topic_tag = 'nav_residue')
         """, ("%@%",))
         return {k: int(v or 0) for k, v in zip(_KPI_KEYS, cur.fetchone())}
 

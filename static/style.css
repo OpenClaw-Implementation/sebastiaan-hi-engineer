@@ -319,3 +319,81 @@ table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums;
 .tax-node h3 { font-size: .95rem; margin: 0 0 .4rem; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
 .tax-node h3 .n { color: var(--muted); font-size: .78rem; font-weight: 600; }
 .tax-children { display: flex; flex-wrap: wrap; gap: .3rem; }
+
+/* ================ Post-deploy audit fixes (2026-10-09) ======================= */
+
+/* Links: the browser default (#0000ee) is unreadable on the dark panels. */
+a { color: var(--accent); }
+a:hover { color: #7ab6ff; }
+a.chip, a.tab, a.brand, a.btn { text-decoration: none; }
+a.chip:hover { border-color: var(--accent); color: var(--text); }
+
+/* Breadcrumb trail styled everywhere (it was scoped to .section-head only). */
+.trail { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+
+/* Header: group label on top, that group's tabs in a row beneath it. */
+.topbar { flex-wrap: wrap; gap: .25rem 1.5rem; padding: .35rem 1.5rem; }
+.nav-groups { gap: .2rem 1.6rem; align-items: flex-start; }
+.nav-group { flex-direction: row; flex-wrap: wrap; align-items: baseline; }
+.nav-group-label { flex-basis: 100%; padding: 0 .6rem; margin-top: .35rem; }
+.nav-group .tab { padding: .1rem .6rem .45rem; }
+.brand-sub { white-space: nowrap; }
+.user-chip { padding: 0; white-space: nowrap; }
+
+/* Wide tables scroll inside their panel instead of widening the page. */
+.panel { overflow-x: auto; }
+main, .container, .panel { min-width: 0; }
+
+/* Pager bar */
+.pager { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .25rem 0 .75rem; }
+.pager-links { display: flex; gap: .3rem; }
+
+/* Phones: 16px gutters, header stacks, nothing forces horizontal scroll. */
+@media (max-width: 760px) {
+  .topbar { padding: .5rem 16px; gap: .4rem; }
+  .brand { width: 100%; flex-wrap: wrap; padding: .4rem 0 0; }
+  .nav-groups { margin: 0; gap: .1rem .8rem; width: 100%; }
+  .nav-group-label { padding: 0 .4rem; }
+  .nav-group .tab { padding: .1rem .4rem .4rem; font-size: .88rem; }
+  .user-chip { width: 100%; justify-content: space-between; padding-bottom: .4rem; }
+  .container, .container.wide { padding: 1rem 16px; }
+  .hero { padding: 1.1rem; }
+  .hero h1 { font-size: 1.35rem; }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-value { font-size: 1.45rem; }
+  .card-grid, .tax-tree { grid-template-columns: minmax(0, 1fr); }
+  .panel-head > div { min-width: 0; }
+  input.btn[type="text"] { width: 100% !important; }
+}
+
+/* Header v2: row 1 = brand + account, row 2 = the five nav groups side by side.
+   Each group is label-over-tabs; groups never stretch to the bar width. */
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1.5rem; padding: .5rem 1.5rem 0; }
+.topbar .brand { order: 1; padding: .3rem 0; }
+.topbar .user-chip { order: 2; margin-left: auto; }
+.nav-groups { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 0 2rem; margin: 0; }
+.nav-group { display: block; flex: 0 0 auto; }
+.nav-group-label { padding: 0 .6rem; margin-top: .25rem; }
+.nav-tabs { display: flex; flex-wrap: wrap; }
+.nav-toggle { display: none; }
+
+/* Exhibitor cards: let long words wrap instead of widening the page. */
+.cards { grid-template-columns: minmax(0, 1fr); }
+.card, article.card { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .topbar { padding: .4rem 16px; gap: .3rem .6rem; }
+  .topbar .brand { width: auto; flex: 1 1 auto; min-width: 0; }
+  .brand-sub { display: none; }
+  .nav-toggle {
+    order: 2; display: inline-flex; align-items: center; gap: .5rem;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    border-radius: 8px; padding: .4rem .7rem; font: inherit; font-weight: 600; font-size: .85rem; cursor: pointer;
+  }
+  .nav-toggle-current { color: var(--muted); font-weight: 500; }
+  .nav-toggle-current::before { content: "· "; }
+  .topbar .user-chip { order: 4; width: 100%; display: none; justify-content: space-between; margin: 0; padding: .3rem 0 .5rem; }
+  .nav-groups { display: none; gap: .2rem 1rem; padding-bottom: .3rem; }
+  .topbar.nav-open .nav-groups { display: flex; }
+  .topbar.nav-open .user-chip { display: flex; }
+}

@@ -23,7 +23,7 @@
     <div class="kpi-label">With real email</div>
     <div class="kpi-value kpi-good">{{ counts.with_email }}</div>
     <div class="kpi-sub">
-      {% set pct = (counts.with_email * 100 // counts.total) if counts.total else 0 %}
+      {% set pct = counts.with_email | pct(counts.total) %}
       {{ pct }}% — the rest need enrichment
       <div class="bar"><span style="width: {{ pct }}%"></span></div>
     </div>
@@ -32,7 +32,7 @@
     <div class="kpi-label">Current filter</div>
     <div class="kpi-value" style="font-size:1.1rem">
       {% if current_role %}
-        {{ current_role.replace('_', ' ') }}
+        {{ current_role | role_label }}
       {% else %}all roles{% endif %}
     </div>
     <div class="kpi-sub">
@@ -70,7 +70,7 @@
 </div>
 
 <div class="panel">
-  <h3>Showing {{ rows | length }} contacts</h3>
+  {% include '_pager.html' %}
   <table class="data-table">
     <thead>
       <tr>
@@ -90,7 +90,7 @@
           <td>{{ r.resolved_company_name or r.company_name or '' }}</td>
           <td>
             {% if r.role_bucket %}
-              <span class="chip">{{ r.role_bucket.replace('_', ' ') }}</span>
+              <span class="chip">{{ r.role_bucket | role_label }}</span>
             {% else %}
               <span class="muted small">—</span>
             {% endif %}
@@ -111,8 +111,6 @@
       {% endfor %}
     </tbody>
   </table>
-  {% if rows | length == 500 %}
-    <p class="muted small" style="margin-top:.75rem">Showing first 500 — refine filters to narrow.</p>
-  {% endif %}
+  {% include '_pager.html' %}
 </div>
 {% endblock %}

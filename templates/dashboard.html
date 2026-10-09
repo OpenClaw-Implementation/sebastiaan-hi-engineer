@@ -34,7 +34,7 @@
     <div class="kpi-label">With email</div>
     <div class="kpi-value kpi-good">{{ "{:,}".format(kpis.c_email) }}</div>
     <div class="kpi-sub">
-      {% set pct = (kpis.c_email * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {% set pct = kpis.c_email | pct(kpis.c_total) %}
       {{ pct }}% of directory
       <div class="bar"><span style="width: {{ pct }}%"></span></div>
     </div>
@@ -43,7 +43,7 @@
     <div class="kpi-label">With website</div>
     <div class="kpi-value">{{ "{:,}".format(kpis.c_site) }}</div>
     <div class="kpi-sub">
-      {% set pct = (kpis.c_site * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {% set pct = kpis.c_site | pct(kpis.c_total) %}
       {{ pct }}% of directory
       <div class="bar"><span style="width: {{ pct }}%"></span></div>
     </div>
@@ -52,7 +52,7 @@
     <div class="kpi-label">Canonical category</div>
     <div class="kpi-value">{{ "{:,}".format(kpis.c_canonical) }}</div>
     <div class="kpi-sub">
-      {% set pct = (kpis.c_canonical * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {% set pct = kpis.c_canonical | pct(kpis.c_total) %}
       {{ pct }}% classified · {{ "{:,}".format(unassigned) }} unassigned
     </div>
   </div>
@@ -62,20 +62,20 @@
     <div class="kpi-value">{{ "{:,}".format(contacts_count.total) }}</div>
     <div class="kpi-sub">
       {{ contacts_count.with_email }} with real email ·
-      {{ (contacts_count.by_role | length) }} roles
+      {{ (contacts_count.by_role | length) }} role buckets
     </div>
   </div>
   <div class="kpi">
     <div class="kpi-label">Jobs captured</div>
     <div class="kpi-value">{{ "{:,}".format(kpis.jobs_total) }}</div>
     <div class="kpi-sub">
-      {{ kpis.jobs_classified }} role-classified ({{ (kpis.jobs_classified * 100 // kpis.jobs_total) if kpis.jobs_total else 0 }}%)
+      {{ kpis.jobs_classified }} role-classified ({{ kpis.jobs_classified | pct(kpis.jobs_total) }}%)
     </div>
   </div>
   <div class="kpi">
     <div class="kpi-label">News articles</div>
     <div class="kpi-value">{{ "{:,}".format(kpis.art_total) }}</div>
-    <div class="kpi-sub">topic-tagging in cycle 4</div>
+    <div class="kpi-sub">{{ "{:,}".format(kpis.art_tagged) }} topic-tagged · {{ "{:,}".format(kpis.art_noise) }} navigation noise</div>
   </div>
   <div class="kpi">
     <div class="kpi-label">Scrape runs</div>
@@ -109,7 +109,7 @@
     <div class="filter-rail" style="margin-top:.6rem">
       {% for role, n in contacts_count.by_role.items() %}
         <a class="chip" href="{{ url_for('contacts', role=role) }}">
-          {{ role.replace('_', ' ') }}
+          {{ role | role_label }}
           <span class="chip-count">{{ n }}</span>
         </a>
       {% endfor %}
