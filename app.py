@@ -811,6 +811,9 @@ def _pipeline_view(kind: str, template: str):
             items = [it for it in items if not it.get("role_bucket")]
         else:
             items = [it for it in items if it.get("role_bucket") == role_arg]
+    elif kind == "jobs":
+        # Menu items and links stored as jobs are hidden unless asked for.
+        items = [it for it in items if it.get("role_bucket") != "not_a_job"]
     if kind == "articles" and topic_arg:
         if topic_arg == "unclassified":
             items = [it for it in items if not it.get("topic_tag")]

@@ -39,6 +39,7 @@ TOPIC_LABELS: dict[str, str] = {
     "regulation_policy":  "Regulation / policy",
     "blog_update":        "Blog / update",
     "nav_residue":        "Navigation noise",
+    "other":              "Other news",
     "unclassified":       "No topic matched",
 }
 

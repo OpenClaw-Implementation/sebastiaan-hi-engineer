@@ -69,7 +69,7 @@
     <div class="kpi-label">Jobs captured</div>
     <div class="kpi-value">{{ "{:,}".format(kpis.jobs_total) }}</div>
     <div class="kpi-sub">
-      {{ kpis.jobs_classified }} role-classified ({{ kpis.jobs_classified | pct(kpis.jobs_total) }}%)
+      {{ kpis.jobs_classified }} real vacancies tagged · {{ kpis.jobs_noise }} menu items hidden
     </div>
   </div>
   <div class="kpi">

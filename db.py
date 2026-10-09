@@ -302,6 +302,21 @@ def _init_db_unsafe() -> None:
             alter table jobs add column if not exists role_bucket text;
             create index if not exists jobs_role_idx on jobs(role_bucket);
 
+            -- Every value written by AI classification (ai_classify.py), so any
+            -- batch can be audited or rolled back (only empty fields are filled).
+            create table if not exists ai_enrichment_log (
+                id bigserial primary key,
+                entity text not null,
+                entity_id bigint not null,
+                field text not null,
+                old_value text,
+                new_value text,
+                model text,
+                batch_id text,
+                created_at timestamptz not null default now()
+            );
+            create index if not exists ai_enrichment_log_entity_idx on ai_enrichment_log(entity, entity_id);
+
             -- Topic tag for articles (manufacturing_production, sustainability_env, …)
             alter table articles add column if not exists topic_tag text;
             alter table articles add column if not exists relevance text;
@@ -1789,7 +1804,7 @@ def companies_by_canonical() -> list[dict]:
 # --------------------------------------------------------------------------- #
 _KPI_KEYS = ("c_total", "c_email", "c_site", "c_news", "c_jobs", "c_canonical",
              "jobs_total", "jobs_classified", "art_total", "runs_total",
-             "src_active", "art_tagged", "art_noise")
+             "src_active", "art_tagged", "art_noise", "jobs_noise")
 
 
 def dashboard_kpis() -> dict:
@@ -1807,12 +1822,13 @@ def dashboard_kpis() -> dict:
               (select count(*) from companies where coalesce(jobs_url,'') <> ''),
               (select count(*) from companies where category_canonical is not null),
               (select count(*) from jobs),
-              (select count(*) from jobs where role_bucket is not null),
+              (select count(*) from jobs where role_bucket is not null and role_bucket <> 'not_a_job'),
               (select count(*) from articles),
               (select count(*) from scrape_runs),
               (select count(*) from event_sources where active),
               (select count(*) from articles where topic_tag is not null and topic_tag <> 'nav_residue'),
-              (select count(*) from articles where topic_tag = 'nav_residue')
+              (select count(*) from articles where topic_tag = 'nav_residue'),
+              (select count(*) from jobs where role_bucket = 'not_a_job')
         """, ("%@%",))
         return {k: int(v or 0) for k, v in zip(_KPI_KEYS, cur.fetchone())}
 

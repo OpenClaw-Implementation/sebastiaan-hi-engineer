@@ -9,8 +9,9 @@
     These eleven top-level categories are the ones the public portal will use,
     and they power the category filter on the Companies tab. Each company's
     original free-text category is kept alongside. {{ "{:,}".format(unassigned) }}
-    companies are not mapped yet — their free-text category matched none of the
-    keyword rules in <code>taxonomy.py</code>.
+    companies are not mapped yet: neither the keyword rules nor the AI
+    classification (<code>ai_classify.py</code>) could place them, usually because they
+    have no description.
   </p>
 </section>
 
