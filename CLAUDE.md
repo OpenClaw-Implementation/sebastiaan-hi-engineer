@@ -178,3 +178,12 @@ heroku releases:rollback -a hi-engineer-app
   `tag_counts`, `export_rows` exist for the new pages.
 - CSV export escapes formula-like cells (= + - @) except digit-only values.
 - "Enrich all pending" asks for confirmation with count + estimated cost.
+
+## AI classification (2026-10-09)
+- `ai_classify.py --task all|categories|specialities|jobs|articles [--limit N] [--dry-run]`
+  uses `claude -p` (JSON-schema output, no tools) to fill empty
+  `companies.category_canonical/subcategory_canonical/specialities`,
+  `jobs.role_bucket` and `articles.topic_tag`. Only empty fields are written;
+  each write is logged to `ai_enrichment_log` for audit/rollback.
+- Extra labels: `jobs.role_bucket = 'not_a_job'` (menu items/links, hidden on
+  Jobs by default) and `articles.topic_tag = 'other'`.
