@@ -67,7 +67,7 @@ def _safe_next(target: str | None) -> str:
     """Only allow same-origin relative next targets."""
     if target and target.startswith("/") and not target.startswith("//"):
         return target
-    return url_for("scraping_engine")
+    return url_for("dashboard")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -125,7 +125,209 @@ def _now() -> str:
 # --------------------------------------------------------------------------- #
 @app.route("/")
 def index():
-    return redirect(url_for("scraping_engine"))
+    return redirect(url_for("dashboard"))
+
+
+# --------------------------------------------------------------------------- #
+# Dashboard — one-glance pipeline health, aimed at a first-time viewer.
+# Each tile is captioned so someone opening the page cold can read it top to
+# bottom and understand both WHAT the number is and WHY it matters.
+# --------------------------------------------------------------------------- #
+@app.route("/dashboard")
+def dashboard():
+    import taxonomy
+    comps_by_cat = db.companies_by_canonical()
+    contacts = db.count_contacts()
+    kpis = db.dashboard_kpis()
+    # top-level taxonomy with counts
+    tax_counts = {r["category"]: r["n"] for r in comps_by_cat}
+    taxonomy_board = []
+    for slug, name, subs in taxonomy.TAXONOMY:
+        taxonomy_board.append({
+            "name": name,
+            "slug": slug,
+            "n_companies": tax_counts.get(slug, 0),
+            "n_subs": len(subs),
+        })
+    return render_template(
+        "dashboard.html",
+        active="dashboard",
+        kpis=kpis,
+        contacts_count=contacts,
+        taxonomy_board=taxonomy_board,
+        unassigned=tax_counts.get("(unassigned)", 0),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Contacts tab — role-tagged people (from Excel import + manual research).
+# --------------------------------------------------------------------------- #
+@app.route("/contacts")
+def contacts():
+    from scrapers.role_classifier import ROLE_LABELS, EPCM_PRIORITY_ROLES
+    role = request.args.get("role") or None
+    has_email_arg = request.args.get("email")
+    has_email = None
+    if has_email_arg == "1":
+        has_email = True
+    elif has_email_arg == "0":
+        has_email = False
+    rows = db.list_contacts(role_bucket=role, has_email=has_email, limit=500)
+    counts = db.count_contacts()
+
+    # Build role filter rail (priority first, then alphabetical by label)
+    rb = counts.get("by_role", {})
+    role_chips = []
+    seen = set()
+    for r in EPCM_PRIORITY_ROLES:
+        if r in rb:
+            role_chips.append({"slug": r, "label": ROLE_LABELS.get(r, r),
+                               "n": rb[r], "active": r == role})
+            seen.add(r)
+    others = sorted(
+        ((r, n) for r, n in rb.items() if r not in seen),
+        key=lambda kv: -kv[1],
+    )
+    for r, n in others:
+        role_chips.append({"slug": r, "label": ROLE_LABELS.get(r, r),
+                           "n": n, "active": r == role})
+    return render_template(
+        "contacts.html",
+        active="contacts",
+        rows=rows,
+        counts=counts,
+        role_chips=role_chips,
+        current_role=role,
+        current_email=has_email_arg,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Taxonomy tab — show the canonical 10-category tree with per-category counts.
+# --------------------------------------------------------------------------- #
+@app.route("/taxonomy")
+def taxonomy_page():
+    import taxonomy
+    tree = taxonomy.TAXONOMY  # fallback — module-level literal
+    db_tree = db.taxonomy_tree()
+    counts = {r["category"]: r["n"] for r in db.companies_by_canonical()}
+
+    board = []
+    for slug, name, subs in tree:
+        board.append({
+            "name": name, "slug": slug,
+            "n_companies": counts.get(slug, 0),
+            "children": [{"slug": s, "name": n} for s, n in subs],
+        })
+    return render_template(
+        "taxonomy.html",
+        active="taxonomy",
+        board=board,
+        db_tree=db_tree,
+        unassigned=counts.get("(unassigned)", 0),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Export tab — CSV + Airtable schema generator (used by Softr too).
+# --------------------------------------------------------------------------- #
+@app.route("/export")
+def export_page():
+    return render_template("export.html", active="export")
+
+
+@app.route("/export/<entity>.csv")
+def export_csv(entity):
+    from io import StringIO
+    import csv as _csv
+    try:
+        result = db.export_rows(entity)
+    except Exception as e:  # noqa: BLE001
+        return f"export failed: {e}", 503
+    if result is None:
+        return "unknown entity", 404
+    header, rows = result
+
+    import re as _re
+    phone_like = _re.compile(r"[+\-]?[\d\s().\-/]+")
+
+    def cell(v):
+        s = "" if v is None else str(v)
+        # Scraped text starting with = + - @ would run as a formula in Excel.
+        # Digit-only values (phone numbers) cannot call functions, so keep them clean.
+        if s[:1] in ("=", "+", "-", "@", "\t", "\r") and not phone_like.fullmatch(s):
+            return "'" + s
+        return s
+
+    buf = StringIO()
+    w = _csv.writer(buf)
+    w.writerow(header)
+    for row in rows:
+        w.writerow([cell(v) for v in row])
+    from flask import Response
+    return Response(buf.getvalue(), mimetype="text/csv", headers={
+        "Content-Disposition": f'attachment; filename="hi_engineer_{entity}.csv"'
+    })
+
+
+@app.route("/export/airtable_schema.json")
+def export_airtable_schema():
+    """Return an Airtable base schema that mirrors the DB entities. Users can
+    paste this into Airtable's Create Base from JSON flow, or feed it to Softr."""
+    schema = {
+        "name": "EPCM Guide — Netherlands",
+        "description": "Companies + Contacts + Jobs + Articles exported from Hi-Engineer.",
+        "tables": [
+            {"name": "Companies", "primaryField": "name",
+             "fields": [
+                {"name": "name", "type": "singleLineText"},
+                {"name": "category", "type": "singleSelect"},
+                {"name": "subcategory", "type": "singleSelect"},
+                {"name": "location", "type": "singleLineText"},
+                {"name": "email", "type": "email"},
+                {"name": "tel", "type": "phoneNumber"},
+                {"name": "website", "type": "url"},
+                {"name": "news_url", "type": "url"},
+                {"name": "jobs_url", "type": "url"},
+                {"name": "linkedin_url", "type": "url"},
+                {"name": "linkedin_industry", "type": "singleLineText"},
+                {"name": "summary", "type": "multilineText"},
+                {"name": "specialities", "type": "multilineText"},
+                {"name": "event_source", "type": "url"},
+             ]},
+            {"name": "Contacts", "primaryField": "name",
+             "fields": [
+                {"name": "name", "type": "singleLineText"},
+                {"name": "company", "type": "singleLineText"},
+                {"name": "title", "type": "singleLineText"},
+                {"name": "email", "type": "email"},
+                {"name": "linkedin_url", "type": "url"},
+                {"name": "role_bucket", "type": "singleSelect"},
+                {"name": "role_sub", "type": "singleSelect"},
+                {"name": "employees_bucket", "type": "singleSelect"},
+             ]},
+            {"name": "Jobs", "primaryField": "title",
+             "fields": [
+                {"name": "company", "type": "singleLineText"},
+                {"name": "title", "type": "singleLineText"},
+                {"name": "url", "type": "url"},
+                {"name": "role_bucket", "type": "singleSelect"},
+                {"name": "source_page", "type": "url"},
+                {"name": "first_seen_at", "type": "dateTime"},
+             ]},
+            {"name": "Articles", "primaryField": "title",
+             "fields": [
+                {"name": "company", "type": "singleLineText"},
+                {"name": "title", "type": "singleLineText"},
+                {"name": "url", "type": "url"},
+                {"name": "topic_tag", "type": "singleSelect"},
+                {"name": "relevance", "type": "singleSelect"},
+                {"name": "source_page", "type": "url"},
+                {"name": "first_seen_at", "type": "dateTime"},
+             ]},
+        ],
+    }
+    return jsonify(schema)
 
 
 @app.route("/scraping-engine")
@@ -360,12 +562,46 @@ def scraping_engine_sources_scrape(sid):
 @app.route("/companies")
 def companies():
     status = request.args.get("status")  # 'pending' | 'enriched' | 'terminal' | None
+    cat = request.args.get("cat")        # canonical taxonomy slug, or 'unassigned'
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    PER_PAGE = 100
+
+    rows = db.list_companies(status=status)
+    if cat:
+        if cat == "unassigned":
+            rows = [r for r in rows if not r.get("category_canonical")]
+        else:
+            rows = [r for r in rows if r.get("category_canonical") == cat]
+
+    total_rows = len(rows)
+    total_pages = max(1, (total_rows + PER_PAGE - 1) // PER_PAGE)
+    page = min(page, total_pages)
+    page_rows = rows[(page - 1) * PER_PAGE : page * PER_PAGE]
+
+    # Taxonomy chip row (top-level only) — makes the filter visible on the page
+    import taxonomy
+    by_cat = {r["category"]: r["n"] for r in db.companies_by_canonical()}
+    cat_chips = [{
+        "slug": slug, "name": name, "n": by_cat.get(slug, 0),
+        "active": cat == slug
+    } for slug, name, _ in taxonomy.TAXONOMY]
+
     return render_template(
         "companies.html",
         active="companies",
-        rows=db.list_companies(status=status),
+        rows=page_rows,
         counts=db.count_companies_by_status(),
         filter_status=status,
+        cat_chips=cat_chips,
+        current_cat=cat,
+        unassigned_n=by_cat.get("(unassigned)", 0),
+        page=page,
+        total_pages=total_pages,
+        total_rows=total_rows,
+        per_page=PER_PAGE,
     )
 
 
@@ -516,20 +752,62 @@ def _pipeline_view(kind: str, template: str):
     since_key = request.args.get("since", "all")
     since = since_map.get(since_key)
     company_q = (request.args.get("company") or "").strip() or None
+    role_arg = request.args.get("role") or None
+    topic_arg = request.args.get("topic") or None
     company_id = None
     if company_q:
         for c in db.list_companies():
             if company_q.lower() in c["name"].lower():
                 company_id = c["id"]; break
-    items = (db.list_jobs(company_id=company_id, since=since, limit=500)
+
+    # Pull items + apply post-filter for role (jobs) / topic (articles)
+    items = (db.list_jobs(company_id=company_id, since=since, limit=5000)
              if kind == "jobs"
-             else db.list_articles(company_id=company_id, since=since, limit=500))
+             else db.list_articles(company_id=company_id, since=since, limit=5000))
+    if kind == "jobs" and role_arg:
+        if role_arg == "unclassified":
+            items = [it for it in items if not it.get("role_bucket")]
+        else:
+            items = [it for it in items if it.get("role_bucket") == role_arg]
+    if kind == "articles" and topic_arg:
+        if topic_arg == "unclassified":
+            items = [it for it in items if not it.get("topic_tag")]
+        else:
+            items = [it for it in items if it.get("topic_tag") == topic_arg]
+
+    # Role / topic chip rails
+    chips = []
+    rows = db.tag_counts(kind)
+    if kind == "jobs":
+        from scrapers.role_classifier import ROLE_LABELS, EPCM_PRIORITY_ROLES
+        seen = set()
+        for r in EPCM_PRIORITY_ROLES:
+            match = next(((rb, n) for rb, n in rows if rb == r), None)
+            if match:
+                chips.append({"slug": r, "label": ROLE_LABELS.get(r, r),
+                              "n": match[1], "active": r == role_arg})
+                seen.add(r)
+        for rb, n in rows:
+            if rb in seen:
+                continue
+            label = ROLE_LABELS.get(rb, rb.replace("_", " "))
+            chips.append({"slug": rb, "label": label, "n": n,
+                          "active": rb == role_arg})
+    else:
+        from scrapers.topic_classifier import TOPIC_LABELS
+        for tt, n in rows:
+            chips.append({"slug": tt, "label": TOPIC_LABELS.get(tt, tt.replace("_", " ")),
+                          "n": n, "active": tt == topic_arg})
+
     return render_template(
         template, active=kind,
         summary=db.pipeline_summary(kind),
-        items=items,
+        items=items[:500],
         since=since_key,
         company_q=company_q or "",
+        chips=chips,
+        current_role=role_arg,
+        current_topic=topic_arg,
     )
 
 

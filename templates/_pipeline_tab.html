@@ -9,18 +9,29 @@
      run_url     - url for the batch endpoint
      tab_url     - url of this tab (for filter links) #}
 
+<section class="section-head">
+  <div class="trail">Content · {{ kind|capitalize }}</div>
+  <h1>{{ kind|capitalize }}</h1>
+  <p>
+    {{ summary.companies_with_website }} companies with a website ·
+    {{ summary.companies_scraped }} scraped so far ·
+    {{ summary.companies_with_items }} produced extractable {{ kind }}.
+    Total discovered: <b>{{ summary.total_items }}</b>.
+    {% if summary.last_run_at %}Last run: {{ (summary.last_run_at|string)[:16]|replace('T',' ') }} UTC.{% endif %}
+  </p>
+</section>
+
 <section class="panel">
   <div class="panel-head">
     <div>
-      <h1>{{ kind|capitalize }}</h1>
-      <p class="muted">
-        Directory: {{ summary.companies_with_website }} companies with a website ·
-        {{ summary.companies_scraped }} scraped for {{ kind }} so far ·
-        {{ summary.companies_with_items }} of those had extractable {{ kind }}.
-        <br>
-        Total {{ kind }} discovered: <b>{{ summary.total_items }}</b>.
-        {% if summary.last_run_at %}
-          Last run: {{ (summary.last_run_at|string)[:16]|replace('T',' ') }} UTC.
+      <h3>Filters</h3>
+      <p class="muted small">
+        {% if kind == 'jobs' %}
+          Role buckets are the same across Jobs + Contacts, so you can jump
+          from a filtered Jobs view directly to the matching Contacts list.
+        {% else %}
+          Topic tags appear here once articles are classified (cycle 4
+          work in progress). "Unclassified" is the default state.
         {% endif %}
       </p>
     </div>
@@ -29,8 +40,9 @@
       <div id="batch-progress" class="muted small" style="margin-top:.4rem"></div>
     </div>
   </div>
-  <div class="chips" style="margin-top:.6rem">
-    <a class="chip{{ ' chip-active' if since=='all' }}" href="{{ tab_url }}?since=all&company={{ company_q }}">All</a>
+
+  <div class="filter-rail" style="margin-top:.6rem">
+    <a class="chip{{ ' chip-active' if since=='all' }}" href="{{ tab_url }}?since=all&company={{ company_q }}">All time</a>
     <a class="chip{{ ' chip-active' if since=='7d' }}" href="{{ tab_url }}?since=7d&company={{ company_q }}">Last 7 d</a>
     <a class="chip{{ ' chip-active' if since=='24h' }}" href="{{ tab_url }}?since=24h&company={{ company_q }}">Last 24 h</a>
     <form method="get" action="{{ tab_url }}" style="display:inline">
@@ -38,15 +50,35 @@
       <input class="btn btn-small" type="text" name="company" value="{{ company_q }}" placeholder="company search…" style="width:180px">
     </form>
   </div>
+
+  {% if chips %}
+    <div style="margin-top:.75rem">
+      <div class="muted small" style="margin-bottom:.3rem">
+        {% if kind == 'jobs' %}Role bucket{% else %}Topic tag{% endif %}:
+      </div>
+      <div class="filter-rail">
+        {% set key = 'role' if kind == 'jobs' else 'topic' %}
+        <a class="chip{{ ' chip-active' if not (current_role if kind=='jobs' else current_topic) }}"
+           href="{{ tab_url }}?since={{ since }}&company={{ company_q }}">all</a>
+        {% for c in chips %}
+          <a class="chip{{ ' chip-active' if c.active }}"
+             href="{{ tab_url }}?since={{ since }}&company={{ company_q }}&{{ key }}={{ c.slug }}">
+            {{ c.label }} <span class="chip-count">{{ c.n }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
 </section>
 
 <section class="panel">
-  <table class="events">
+  <h3>{{ items|length }} items shown</h3>
+  <table class="data-table">
     <thead>
       <tr>
         <th>Company</th>
         <th>Title</th>
-        {% if kind == 'jobs' %}<th>Location</th>{% endif %}
+        {% if kind == 'jobs' %}<th>Role</th>{% else %}<th>Topic</th>{% endif %}
         <th>Discovered</th>
         <th></th>
       </tr>
@@ -62,13 +94,21 @@
               <div class="muted small clip">{{ it.summary[:180] }}{% if it.summary|length > 180 %}…{% endif %}</div>
             {% endif %}
           </td>
-          {% if kind == 'jobs' %}<td>{{ it.location or '—' }}</td>{% endif %}
+          <td>
+            {% if kind == 'jobs' and it.role_bucket %}
+              <span class="chip">{{ it.role_bucket.replace('_', ' ') }}</span>
+            {% elif kind == 'articles' and it.topic_tag %}
+              <span class="chip">{{ it.topic_tag.replace('_', ' ') }}</span>
+            {% else %}
+              <span class="muted small">—</span>
+            {% endif %}
+          </td>
           <td class="mono small">{{ (it.first_seen_at|string)[:16]|replace('T',' ') }}</td>
           <td><a class="muted small" href="{{ it.source_page }}" target="_blank" rel="noopener">source</a></td>
         </tr>
       {% else %}
-        <tr><td colspan="{{ 5 if kind == 'jobs' else 4 }}" class="muted">
-          No {{ kind }} discovered yet. Click <b>Run {{ kind }} pipeline</b> to fetch.
+        <tr><td colspan="5" class="muted">
+          No {{ kind }} match the current filters.
         </td></tr>
       {% endfor %}
     </tbody>

@@ -1,0 +1,1212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hi-Engineer Guide</title>
+<meta name="description" content="What Hi-Engineer is, what data it holds, what is deployed, how it works, how often it runs and what it costs — written for someone new to the project.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --line: #e2e1dc;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #74736e;
+  --accent: #2a78d6;
+  --accent-soft: #e6f0fc;
+  --s1: #2a78d6;   /* series 1 blue */
+  --s2: #eb6834;   /* series 2 orange */
+  --s3: #1baf7a;   /* series 3 aqua */
+  --good: #0ca30c;
+  --warn: #b77b00;
+  --bad: #d03b3b;
+  --good-soft: #e5f5e5;
+  --warn-soft: #fdf3dc;
+  --bad-soft: #fbe7e7;
+  --code-bg: #efeee9;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --line: #34332f;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #9b9a91;
+    --accent: #3987e5;
+    --accent-soft: #1b2a3d;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --good: #2fbf2f;
+    --warn: #fab219;
+    --bad: #e66767;
+    --good-soft: #17301a;
+    --warn-soft: #33290f;
+    --bad-soft: #3a1c1c;
+    --code-bg: #262624;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --line: #34332f;
+  --text: #ffffff;
+  --text-2: #c3c2b7;
+  --muted: #9b9a91;
+  --accent: #3987e5;
+  --accent-soft: #1b2a3d;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --good: #2fbf2f;
+  --warn: #fab219;
+  --bad: #e66767;
+  --good-soft: #17301a;
+  --warn-soft: #33290f;
+  --bad-soft: #3a1c1c;
+  --code-bg: #262624;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+
+/* ---------- layout ---------- */
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 32px 0; }
+.toc .toc-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+.toc li { margin: 0; }
+.toc a { display: block; padding: 5px 10px; border-left: 2px solid var(--line); color: var(--text-2); text-decoration: none; font-size: .9rem; line-height: 1.35; }
+.toc a:hover { color: var(--text); border-left-color: var(--accent); }
+.toc a.active { color: var(--text); border-left-color: var(--accent); font-weight: 600; }
+.toc .num { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+main { min-width: 0; padding: 32px 0 80px; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 0 16px; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 0 0; }
+  .toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toc a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: .8rem; }
+}
+
+/* ---------- hero ---------- */
+.hero { padding: 36px 0 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(2rem, 4vw, 2.9rem); line-height: 1.1; margin: 10px 0 14px; letter-spacing: -.02em; }
+.lede { font-size: 1.15rem; color: var(--text-2); max-width: 64ch; margin: 0; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: .85rem; color: var(--muted); }
+
+/* ---------- sections ---------- */
+section.doc { padding: 48px 0 8px; scroll-margin-top: 12px; }
+.stage-tag { display: inline-flex; align-items: center; gap: 8px; font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.stage-tag .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: .8rem; letter-spacing: 0; }
+h2 { font-size: 1.75rem; line-height: 1.2; margin: 8px 0 10px; letter-spacing: -.01em; }
+h3 { font-size: 1.12rem; margin: 30px 0 8px; }
+h4 { font-size: .98rem; margin: 0 0 6px; }
+p { margin: 0 0 14px; max-width: 72ch; }
+.section-lede { font-size: 1.05rem; color: var(--text-2); }
+ul.clean { margin: 0 0 14px; padding-left: 20px; max-width: 72ch; }
+ul.clean li { margin-bottom: 6px; }
+
+/* ---------- cards & grids ---------- */
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); min-width: 0; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+.card .k { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.card.accent { border-top: 3px solid var(--accent); }
+
+/* KPI tiles */
+.kpi .v { font-size: 2rem; font-weight: 700; line-height: 1.1; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.kpi .sub { font-size: .84rem; color: var(--text-2); margin-top: 4px; }
+
+/* Callouts */
+.callout { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 12px; border-radius: 12px; padding: 14px 18px; margin: 18px 0; border: 1px solid var(--line); background: var(--surface); }
+.callout svg { margin-top: 3px; }
+.callout p { margin: 0 0 6px; }
+.callout p:last-child { margin: 0; }
+.callout.warn { background: var(--warn-soft); border-color: transparent; }
+.callout.bad { background: var(--bad-soft); border-color: transparent; }
+.callout.good { background: var(--good-soft); border-color: transparent; }
+.callout.info { background: var(--accent-soft); border-color: transparent; }
+
+/* Status pills (icon + label, never colour alone) */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; padding: 3px 10px 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--text); }
+.pill.warn { background: var(--warn-soft); color: var(--text); }
+.pill.bad  { background: var(--bad-soft); color: var(--text); }
+.pill.info { background: var(--accent-soft); color: var(--text); }
+.pill svg { flex: none; }
+.pill.good svg { color: var(--good); }
+.pill.warn svg { color: var(--warn); }
+.pill.bad svg  { color: var(--bad); }
+.pill.info svg { color: var(--accent); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 14px 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface-2); font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .muted, .muted { color: var(--muted); }
+/* Narrow screens: each table row becomes a small stacked card */
+@media (max-width: 640px) {
+  .table-wrap { overflow: visible; }
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { display: none; }
+  .table-wrap tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .table-wrap tr:last-child { border-bottom: 0; }
+  .table-wrap td { border: 0; padding: 2px 0; text-align: left; }
+  .table-wrap td:first-child { font-weight: 700; margin-bottom: 2px; }
+  .table-wrap td.num { text-align: left; color: var(--text-2); }
+  .pill { white-space: normal; }
+}
+
+/* ---------- roadmap ---------- */
+.roadmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 18px 0; counter-reset: rm; }
+.rm-step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 16px; min-width: 0; }
+.rm-step.now { border: 2px solid var(--accent); }
+.rm-step .when { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.rm-step h4 { margin: 6px 0 6px; font-size: 1rem; }
+.rm-step p { font-size: .88rem; color: var(--text-2); margin: 0 0 10px; }
+
+/* ---------- pipeline flow ---------- */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin: 20px 0; }
+.flow-step { position: relative; padding: 16px 14px 16px 14px; background: var(--surface); border: 1px solid var(--line); border-right: 0; min-width: 0; }
+.flow-step:first-child { border-radius: 12px 0 0 12px; }
+.flow-step:last-child { border-right: 1px solid var(--line); border-radius: 0 12px 12px 0; }
+.flow-step .n { font-size: .7rem; font-weight: 700; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+.flow-step h4 { margin: 4px 0 4px; font-size: .95rem; }
+.flow-step p { font-size: .82rem; color: var(--text-2); margin: 0; }
+.flow-step::after { content: ""; position: absolute; right: -8px; top: 50%; width: 14px; height: 14px; background: var(--surface); border-top: 1px solid var(--line); border-right: 1px solid var(--line); transform: translateY(-50%) rotate(45deg); z-index: 1; }
+.flow-step:last-child::after { display: none; }
+@media (max-width: 760px) {
+  .flow { grid-template-columns: minmax(0,1fr); }
+  .flow-step, .flow-step:first-child, .flow-step:last-child { border: 1px solid var(--line); border-bottom: 0; border-radius: 0; }
+  .flow-step:first-child { border-radius: 12px 12px 0 0; }
+  .flow-step:last-child { border-bottom: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+  .flow-step::after { right: auto; left: 50%; top: auto; bottom: -8px; transform: translateX(-50%) rotate(135deg); }
+}
+
+/* ---------- nav map (app tabs) ---------- */
+.navmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 18px 0; }
+.navgroup { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.navgroup .gl { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.navgroup .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tabchip { font-size: .82rem; font-weight: 600; padding: 3px 10px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); }
+.tabchip.new { background: var(--accent-soft); border-color: var(--accent); }
+.navgroup p { font-size: .85rem; color: var(--text-2); margin: 10px 0 0; }
+
+/* ---------- charts ---------- */
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 14px 0 18px; box-shadow: var(--shadow); min-width: 0; }
+.chart-title { font-weight: 700; font-size: .98rem; margin: 0 0 2px; }
+.chart-sub { font-size: .84rem; color: var(--text-2); margin: 0 0 14px; }
+.bars { display: grid; grid-template-columns: minmax(110px, 200px) minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; }
+.bars .lbl { font-size: .87rem; color: var(--text); overflow-wrap: anywhere; line-height: 1.25; }
+.bars .track { height: 14px; position: relative; }
+.bars .fill { height: 100%; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; outline: none; }
+.bars .fill:hover, .bars .fill:focus-visible { filter: brightness(1.12); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--s1); }
+.bars .fill.zero { background: var(--line); }
+.bars .val { font-size: .84rem; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+@media (max-width: 560px) {
+  .bars { grid-template-columns: minmax(0,1fr) auto; }
+  .bars .lbl { grid-column: 1 / -1; margin-bottom: -4px; }
+}
+
+.stack-row { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 10px; }
+.stack-row .lbl { font-size: .87rem; overflow-wrap: anywhere; }
+.stack { display: flex; height: 28px; gap: 2px; }
+.stack .seg { display: grid; place-items: center; color: #fff; font-size: .78rem; font-weight: 700; min-width: 0; overflow: hidden; white-space: nowrap; outline: none; }
+.stack .seg:first-child { border-radius: 4px 0 0 4px; }
+.stack .seg:last-child { border-radius: 0 4px 4px 0; }
+.stack .seg:only-child { border-radius: 4px; }
+.stack .seg:hover, .stack .seg:focus-visible { filter: brightness(1.12); }
+.seg.c1 { background: var(--s1); } .seg.c2 { background: var(--s2); } .seg.c3 { background: var(--s3); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: .84rem; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend i.c1 { background: var(--s1); } .legend i.c2 { background: var(--s2); } .legend i.c3 { background: var(--s3); }
+@media (max-width: 560px) {
+  .stack-row { grid-template-columns: minmax(0,1fr); gap: 4px; }
+}
+
+.cols { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; padding-top: 20px; border-bottom: 1px solid var(--line); }
+.col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
+.col .bar { width: 100%; max-width: 54px; background: var(--s1); border-radius: 4px 4px 0 0; outline: none; }
+.col .bar:hover, .col .bar:focus-visible { filter: brightness(1.12); }
+.col .cv { font-size: .82rem; color: var(--text-2); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.col-labels { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
+.col-labels span { text-align: center; font-size: .8rem; color: var(--muted); }
+
+/* tooltip */
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--text); color: var(--surface); font-size: .8rem; line-height: 1.35; padding: 7px 10px; border-radius: 6px; max-width: 260px; opacity: 0; transition: opacity .08s; }
+#tip.on { opacity: 1; }
+
+details.more { margin: 10px 0 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+details.more summary { cursor: pointer; padding: 10px 14px; font-weight: 600; font-size: .92rem; }
+details.more > div { padding: 0 16px 14px; }
+
+.footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); font-size: .84rem; color: var(--muted); }
+.theme-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 2px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.6 8.3l2.2 2.2 4.6-4.8" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 1.2l7 12.6H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.2" stroke="#000" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 7.2v4.2M8 4.6v.2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#tldr"><span class="num">0</span>In one minute</a></li>
+    <li><a href="#objective"><span class="num">1</span>The objective</a></li>
+    <li><a href="#bigpicture"><span class="num">2</span>The big picture</a></li>
+    <li><a href="#app"><span class="num">3</span>What's in the web app</a></li>
+    <li><a href="#data"><span class="num">4</span>The current data</a></li>
+    <li><a href="#deployed"><span class="num">5</span>What is deployed</a></li>
+    <li><a href="#how"><span class="num">6</span>How it works, stage by stage</a></li>
+    <li><a href="#cadence"><span class="num">7</span>Cadence</a></li>
+    <li><a href="#costs"><span class="num">8</span>Costs</a></li>
+    <li><a href="#issues"><span class="num">9</span>Known gaps</a></li>
+    <li><a href="#next"><span class="num">10</span>What comes next</a></li>
+    <li><a href="#glossary"><span class="num">11</span>Glossary</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Project guide · for new readers</div>
+  <h1>Hi-Engineer: the data engine behind the EPCM Guide</h1>
+  <p class="lede">
+    This guide explains, from the top down, why Hi-Engineer exists, what is inside
+    the web application, what data it holds today, what is live in production,
+    how the pipeline works, how often it runs and what it costs. It assumes no
+    prior knowledge of the project.
+  </p>
+  <div class="meta-row">
+    <span>Data as of 9 October 2026</span>
+    <span>Pilot market: the Netherlands</span>
+    <span>Heroku app: <code>hi-engineer-app</code></span>
+    <button class="theme-btn" type="button" id="themeBtn" aria-label="Toggle light or dark theme">Light / dark</button>
+  </div>
+</header>
+
+<!-- ============================================================ 0 -->
+<section class="doc" id="tldr">
+  <div class="stage-tag"><span class="n">0</span>In one minute</div>
+  <h2>The short version</h2>
+  <p class="section-lede">
+    The EPCM Guide (<code>epcmguide.com</code>) will be a public directory of
+    suppliers to engineering, procurement and construction projects. Hi-Engineer is
+    the back-office tool that finds those suppliers, fills in their details,
+    tags them, collects their job openings and news, and exports the result so a
+    portal can show it.
+  </p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="k">Companies</div><div class="v">3,066</div><div class="sub">supplier records in the directory</div></div>
+    <div class="card kpi"><div class="k">Contacts</div><div class="v">791</div><div class="sub">people at those suppliers, role-tagged</div></div>
+    <div class="card kpi"><div class="k">Jobs</div><div class="v">930</div><div class="sub">openings scraped from careers pages</div></div>
+    <div class="card kpi"><div class="k">News items</div><div class="v">2,328</div><div class="sub">links scraped from news/blog pages</div></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h4>What works today</h4>
+      <ul class="clean">
+        <li>Scraping exhibitor lists from 23 of 26 trade-show pages.</li>
+        <li>A four-provider enrichment chain that fills website, LinkedIn, industry and summary.</li>
+        <li>Automatic discovery of each supplier's jobs and news pages, and extraction of their listings.</li>
+        <li>The master Excel (1,975 companies, contacts, taxonomy) is loaded into the database.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>What needs attention</h4>
+      <ul class="clean">
+        <li>The redesigned interface is built and tested but <b>not yet deployed</b>.</li>
+        <li><b>No pipeline has run since 16 July</b> — the daily schedule is not active.</li>
+        <li>Only 14 of 791 contacts have an email address.</li>
+        <li>The media-portal scraper produces nothing yet (all 9 portals block or need JavaScript).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 1 -->
+<section class="doc" id="objective">
+  <div class="stage-tag"><span class="n">1</span>The objective</div>
+  <h2>Why this project exists</h2>
+  <p class="section-lede">
+    For the rest of 2026 the focus is on gathering the data for the EPCM Guide,
+    starting with the Netherlands as a pilot. Once the guide exists, the same
+    data foundation feeds a jobs board and a news service.
+  </p>
+
+  <h3>The plan, as four stages</h3>
+  <div class="roadmap">
+    <div class="rm-step now">
+      <div class="when">Now · 2026</div>
+      <h4>A. Guide data</h4>
+      <p>Supplier companies and their contact people, Netherlands first.</p>
+      <span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Hi-Engineer's main job</span>
+    </div>
+    <div class="rm-step">
+      <div class="when">Q4 2026 · deciding</div>
+      <h4>B. Database &amp; portal</h4>
+      <p>Data lands in Airtable or Softr (demo sessions planned); the public portal is built in Softr or by an agency.</p>
+      <span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Fed by the Export tab</span>
+    </div>
+    <div class="rm-step">
+      <div class="when">After the guide</div>
+      <h4>C. Jobs board</h4>
+      <p>A <code>jboard.io</code>-style board for project engineers, project and construction managers, architects, HSE and commercial roles.</p>
+      <span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Groundwork in place</span>
+    </div>
+    <div class="rm-step">
+      <div class="when">After the guide</div>
+      <h4>D. News</h4>
+      <p>Relevant technical news on <code>beehiiv</code> and/or <code>circle</code>, filtered by tags still to be defined.</p>
+      <span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Groundwork in place</span>
+    </div>
+  </div>
+
+  <h3>Who does what</h3>
+  <p>The strategy splits the data work between automation (Hi-Engineer) and manual research. This table is the agreed split today.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data stream</th><th>How it is gathered today</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><b>Supplier companies</b></td><td>LinkedIn Sales Navigator + Evaboot exports (manual), plus Hi-Engineer's trade-show scraping and enrichment</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Automated + imported</span></td></tr>
+        <tr><td><b>Supplier contact people</b></td><td>Researched by hand on LinkedIn; the next step is choosing a tool (Apollo, Clay, …) to automate it</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Manual; imported into the app</span></td></tr>
+        <tr><td><b>Manufacturing companies</b></td><td>Handled manually for now; automate later based on what works for suppliers</td><td><span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Out of the app for now</span></td></tr>
+        <tr><td><b>Manufacturing contacts</b></td><td>Same as above</td><td><span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Out of the app for now</span></td></tr>
+        <tr><td><b>Jobs</b></td><td>Scraped from each supplier's careers page and tagged by role</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Running, tagging partial</span></td></tr>
+        <tr><td><b>News</b></td><td>Scraped from each supplier's news/blog page and tagged by topic</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Running, tagging partial</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The master spreadsheet</h3>
+  <p>
+    Much of the early research lives in one workbook, <code>EPCM Guide_Netherlands (2).xlsx</code>.
+    It is now treated as a source of truth and has been imported into the database. Its 18 sheets break down like this:
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Sheet</th><th class="num">Rows</th><th>What it holds</th></tr></thead>
+      <tbody>
+        <tr><td><b>Companies</b></td><td class="num">1,975</td><td>Supplier master list: category, location, phone, email, website, LinkedIn, industry, summary, and for ~260 rows the trade-show source</td></tr>
+        <tr><td><b>Contacts</b></td><td class="num">681</td><td>People at suppliers: company, company size, LinkedIn, name, title, email (only 14 real emails)</td></tr>
+        <tr><td><b>project engineers</b></td><td class="num">77</td><td>Hand-picked engineers tagged MEP, Civil, Structural, Process, E&amp;I, BIM… (mostly Arcadis)</td></tr>
+        <tr><td><b>project managers</b></td><td class="num">42</td><td>Project managers (Arcadis, Anticimex)</td></tr>
+        <tr><td>senior technical · architecten · safety · product manager · construction managers · rest</td><td class="num">26</td><td>Smaller role-specific lists</td></tr>
+        <tr><td><b>topics</b></td><td class="num">10</td><td>The category tree that became the canonical taxonomy</td></tr>
+        <tr><td><b>Sources</b></td><td class="num">46</td><td>URLs of media portals and events used as inputs</td></tr>
+        <tr><td>linkedin invite · resources · HR · Commerce · plant managers · freelance</td><td class="num">—</td><td>Templates and empty placeholders</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="doc" id="bigpicture">
+  <div class="stage-tag"><span class="n">2</span>The big picture</div>
+  <h2>From a trade-show page to a portal listing</h2>
+  <p class="section-lede">
+    Every record moves through the same six stages. Each stage is a separate piece
+    of code, so a failure in one does not break the others.
+  </p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="n">Stage 1</div><h4>Collect</h4><p>Scrape exhibitor lists from trade shows; import the master Excel.</p></div>
+    <div class="flow-step"><div class="n">Stage 2</div><h4>Normalise</h4><p>One row per company in a single <code>companies</code> table.</p></div>
+    <div class="flow-step"><div class="n">Stage 3</div><h4>Enrich</h4><p>Paid data providers fill website, LinkedIn, industry, summary.</p></div>
+    <div class="flow-step"><div class="n">Stage 4</div><h4>Discover content</h4><p>Find each supplier's jobs and news pages, extract the listings.</p></div>
+    <div class="flow-step"><div class="n">Stage 5</div><h4>Classify</h4><p>Tag companies by category, jobs by role, news by topic.</p></div>
+    <div class="flow-step"><div class="n">Stage 6</div><h4>Export</h4><p>CSV and an Airtable schema, ready for Airtable or Softr.</p></div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card accent">
+      <div class="k">Inputs</div>
+      <p style="margin-top:6px">26 trade-show exhibitor pages, 9 industrial media portals, and the master Excel workbook.</p>
+    </div>
+    <div class="card accent">
+      <div class="k">The core</div>
+      <p style="margin-top:6px">A Flask web application on Heroku with a Postgres database. Everyone works in the same browser interface.</p>
+    </div>
+    <div class="card accent">
+      <div class="k">Outputs</div>
+      <p style="margin-top:6px">A clean, tagged supplier directory with contacts, jobs and news — downloadable or pushed to Airtable.</p>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <svg width="18" height="18" style="color:var(--accent)"><use href="#i-info"/></svg>
+    <div>
+      <p><b>What Hi-Engineer is not.</b> It is not the public website, it does not send emails to anyone, and it does not copy full article text. It collects and organises data; the portal shows it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="doc" id="app">
+  <div class="stage-tag"><span class="n">3</span>What's in the web app</div>
+  <h2>A tour of the interface</h2>
+  <p class="section-lede">
+    The redesigned interface groups the tabs into five sections that follow the
+    pipeline from left to right. Tabs marked <span class="tabchip new">blue</span>
+    are new in the redesign, which is not yet deployed (see <a href="#deployed">section 5</a>).
+  </p>
+
+  <div class="navmap">
+    <div class="navgroup">
+      <div class="gl">Overview</div>
+      <div class="tabs"><span class="tabchip new">Dashboard</span></div>
+      <p>Headline numbers, coverage bars and a short "new here?" explainer.</p>
+    </div>
+    <div class="navgroup">
+      <div class="gl">Ingest</div>
+      <div class="tabs"><span class="tabchip">Scraping Engine</span><span class="tabchip">Content Engine</span></div>
+      <p>Run the trade-show and media-portal scrapers; manage the list of source URLs.</p>
+    </div>
+    <div class="navgroup">
+      <div class="gl">Directory</div>
+      <div class="tabs"><span class="tabchip">Companies</span><span class="tabchip new">Contacts</span><span class="tabchip new">Taxonomy</span></div>
+      <p>The supplier list, the people at those suppliers, and the category tree.</p>
+    </div>
+    <div class="navgroup">
+      <div class="gl">Content</div>
+      <div class="tabs"><span class="tabchip">Jobs</span><span class="tabchip">Articles</span></div>
+      <p>Scraped job openings and news items, filterable by role and topic.</p>
+    </div>
+    <div class="navgroup">
+      <div class="gl">Operations</div>
+      <div class="tabs"><span class="tabchip new">Export</span><span class="tabchip">Stats</span><span class="tabchip">Logs</span></div>
+      <p>Downloads for Airtable/Softr, analytics, and a step-by-step record of every run with its cost.</p>
+    </div>
+  </div>
+
+  <h3>Each tab in detail</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tab</th><th>What you see</th><th>What you can do</th></tr></thead>
+      <tbody>
+        <tr><td><b>Dashboard</b></td><td>Eight headline tiles (companies, emails, websites, categorised, contacts, jobs, news, runs), category chips with counts, contacts by role</td><td>Click any chip to jump to a filtered list</td></tr>
+        <tr><td><b>Scraping Engine</b></td><td>The 26 trade-show source URLs, the parser each uses, when it last ran and how many exhibitors it found</td><td>Add or remove a source, scrape one source, scrape all</td></tr>
+        <tr><td><b>Content Engine</b></td><td>The 9 media portals and what each returned</td><td>Scrape all portals</td></tr>
+        <tr><td><b>Companies</b></td><td>17 fields per supplier, 100 per page, with category and enrichment-status chips</td><td>Filter by category or status, enrich one company, enrich all pending</td></tr>
+        <tr><td><b>Contacts</b></td><td>People with title, company, role tag, email and LinkedIn link</td><td>Filter by role (engineering roles first) and by "has email"</td></tr>
+        <tr><td><b>Taxonomy</b></td><td>The 11 top-level categories, their 22 sub-categories, and how many companies sit in each</td><td>Jump to the companies in a category</td></tr>
+        <tr><td><b>Jobs</b></td><td>Job titles with company, role tag and date found</td><td>Filter by role, date, company; run the jobs pipeline</td></tr>
+        <tr><td><b>Articles</b></td><td>News titles with company, topic tag and date found</td><td>Filter by topic, date, company; run the articles pipeline</td></tr>
+        <tr><td><b>Export</b></td><td>Download buttons</td><td>Get Companies / Contacts / Jobs / Articles as CSV, or the Airtable base schema as JSON</td></tr>
+        <tr><td><b>Stats</b></td><td>Enrichment results per provider, field fill rates, top industries and locations, 14-day cost</td><td>Switch the time window (24 h, 7 d, 30 d, all)</td></tr>
+        <tr><td><b>Logs</b></td><td>A live feed of every step of the latest run, run history, total spend</td><td>Open any past run to see every step and every company it touched</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <svg width="18" height="18" style="color:var(--muted)"><use href="#i-info"/></svg>
+    <div><p>Access is by email and password. Every page except the login screen and the health check requires a signed-in user.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="doc" id="data">
+  <div class="stage-tag"><span class="n">4</span>The current data</div>
+  <h2>What the database holds today</h2>
+  <p class="section-lede">
+    All figures below were read from the production database on 9 October 2026.
+    Hover over (or tab to) any bar for the exact count.
+  </p>
+
+  <h3>4.1 Companies</h3>
+  <p>
+    The directory holds <b>3,066 companies</b>: 1,190 found by the scrapers and
+    enrichment before October, and 1,876 added from the master Excel (99 companies
+    appeared in both and were merged).
+  </p>
+
+  <div class="chart">
+    <div class="chart-title">How complete each company field is</div>
+    <div class="chart-sub">Share of the 3,066 companies that have each field filled in</div>
+    <div class="bars">
+      <div class="lbl">Website</div><div class="track"><div class="fill" style="width:87.2%" tabindex="0" data-tip="Website · 2,675 of 3,066 (87%)"></div></div><div class="val">2,675 · 87%</div>
+      <div class="lbl">LinkedIn page</div><div class="track"><div class="fill" style="width:68.2%" tabindex="0" data-tip="LinkedIn page · 2,092 of 3,066 (68%)"></div></div><div class="val">2,092 · 68%</div>
+      <div class="lbl">Canonical category</div><div class="track"><div class="fill" style="width:63.2%" tabindex="0" data-tip="Canonical category · 1,938 of 3,066 (63%)"></div></div><div class="val">1,938 · 63%</div>
+      <div class="lbl">Email</div><div class="track"><div class="fill" style="width:60.1%" tabindex="0" data-tip="Email · 1,843 of 3,066 (60%)"></div></div><div class="val">1,843 · 60%</div>
+      <div class="lbl">News page</div><div class="track"><div class="fill" style="width:23.6%" tabindex="0" data-tip="News page · 724 of 3,066 (24%)"></div></div><div class="val">724 · 24%</div>
+      <div class="lbl">Jobs page</div><div class="track"><div class="fill" style="width:21.0%" tabindex="0" data-tip="Jobs page · 645 of 3,066 (21%)"></div></div><div class="val">645 · 21%</div>
+    </div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">Enrichment status</div>
+    <div class="chart-sub">Where each company stands in the paid enrichment chain</div>
+    <div class="stack-row">
+      <div class="lbl">3,066 companies</div>
+      <div class="stack">
+        <div class="seg c1" style="width:29.0%" tabindex="0" data-tip="Enriched · 889 (29%) — at least one provider filled data">889</div>
+        <div class="seg c2" style="width:61.2%" tabindex="0" data-tip="Pending · 1,876 (61%) — the Excel imports, not yet run through the chain">1,876</div>
+        <div class="seg c3" style="width:9.8%" tabindex="0" data-tip="Terminal · 301 (10%) — every provider tried, nothing found">301</div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="c1"></i>Enriched</span><span><i class="c2"></i>Pending (Excel imports)</span><span><i class="c3"></i>Terminal (nothing found)</span></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">Companies per canonical category</div>
+    <div class="chart-sub">The 1,938 categorised companies, by top-level category. A further 1,128 (37%) are not yet assigned.</div>
+    <div class="bars">
+      <div class="lbl">Design &amp; Engineering</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Design &amp; Engineering · 724"></div></div><div class="val">724</div>
+      <div class="lbl">Manufacturing &amp; Production</div><div class="track"><div class="fill" style="width:95.0%" tabindex="0" data-tip="Manufacturing &amp; Production · 688"></div></div><div class="val">688</div>
+      <div class="lbl">Building &amp; Facilities</div><div class="track"><div class="fill" style="width:38.1%" tabindex="0" data-tip="Building &amp; Facilities · 276"></div></div><div class="val">276</div>
+      <div class="lbl">Equipment &amp; Machinery</div><div class="track"><div class="fill" style="width:19.8%" tabindex="0" data-tip="Equipment &amp; Machinery · 143"></div></div><div class="val">143</div>
+      <div class="lbl">Smart Manufacturing</div><div class="track"><div class="fill" style="width:8.0%" tabindex="0" data-tip="Smart Manufacturing · 58"></div></div><div class="val">58</div>
+      <div class="lbl">Sustainability &amp; Environment</div><div class="track"><div class="fill" style="width:5.1%" tabindex="0" data-tip="Sustainability &amp; Environment · 37"></div></div><div class="val">37</div>
+      <div class="lbl">Construction &amp; Renovation</div><div class="track"><div class="fill" style="width:1.7%" tabindex="0" data-tip="Construction &amp; Renovation · 12"></div></div><div class="val">12</div>
+      <div class="lbl">4 other categories</div><div class="track"><div class="fill zero" style="width:0" tabindex="0" data-tip="Safety &amp; Health, Project Mgmt &amp; Strategy, Construction Mgmt and Plant Mgmt have no companies yet"></div></div><div class="val">0 each</div>
+    </div>
+  </div>
+
+  <p>
+    The "canonical category" is the one category per company that the portal will use. It comes
+    from the 10-branch tree in the Excel <code>topics</code> sheet (plus Construction &amp; Renovation).
+    The original free-text categories are kept alongside, so nothing is lost by mapping.
+  </p>
+
+  <h3>4.2 Contacts</h3>
+  <div class="grid g4">
+    <div class="card kpi"><div class="k">Contacts</div><div class="v">791</div><div class="sub">all from the Excel</div></div>
+    <div class="card kpi"><div class="k">With LinkedIn</div><div class="v">791</div><div class="sub">100%</div></div>
+    <div class="card kpi"><div class="k">Linked to a company</div><div class="v">768</div><div class="sub">97% matched to a directory record</div></div>
+    <div class="card kpi"><div class="k">With email</div><div class="v">14</div><div class="sub">2% — the main gap</div></div>
+  </div>
+
+  <div class="chart">
+    <div class="chart-title">Contacts by role</div>
+    <div class="chart-sub">Role is taken from the role-specific Excel sheet when there is one, otherwise inferred from the job title</div>
+    <div class="bars">
+      <div class="lbl">Executive</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Executive · 234 (CEO, director, founder…)"></div></div><div class="val">234</div>
+      <div class="lbl">No role matched</div><div class="track"><div class="fill" style="width:70.1%" tabindex="0" data-tip="No role matched · 164"></div></div><div class="val">164</div>
+      <div class="lbl">Sales / Commercial</div><div class="track"><div class="fill" style="width:50.9%" tabindex="0" data-tip="Sales / Commercial · 119"></div></div><div class="val">119</div>
+      <div class="lbl">Project Engineer</div><div class="track"><div class="fill" style="width:38.0%" tabindex="0" data-tip="Project Engineer · 89"></div></div><div class="val">89</div>
+      <div class="lbl">HR</div><div class="track"><div class="fill" style="width:23.5%" tabindex="0" data-tip="HR · 55"></div></div><div class="val">55</div>
+      <div class="lbl">Project Manager</div><div class="track"><div class="fill" style="width:18.8%" tabindex="0" data-tip="Project Manager · 44"></div></div><div class="val">44</div>
+      <div class="lbl">Production / Ops</div><div class="track"><div class="fill" style="width:9.8%" tabindex="0" data-tip="Production / Ops · 23"></div></div><div class="val">23</div>
+      <div class="lbl">Senior Technical</div><div class="track"><div class="fill" style="width:9.4%" tabindex="0" data-tip="Senior Technical · 22"></div></div><div class="val">22</div>
+      <div class="lbl">Procurement</div><div class="track"><div class="fill" style="width:5.6%" tabindex="0" data-tip="Procurement · 13"></div></div><div class="val">13</div>
+      <div class="lbl">Architect</div><div class="track"><div class="fill" style="width:2.6%" tabindex="0" data-tip="Architect · 6"></div></div><div class="val">6</div>
+      <div class="lbl">Other roles (8 buckets)</div><div class="track"><div class="fill" style="width:9.4%" tabindex="0" data-tip="Consultant 5 · Construction Mgr 3 · Service 3 · HSE 3 · Project other 2 · Product Mgr 2 · Marketing 2 · Plant Mgr 2"></div></div><div class="val">22</div>
+    </div>
+  </div>
+
+  <h3>4.3 Jobs</h3>
+  <p>
+    <b>930 job listings</b> were extracted from the careers pages of suppliers. Each
+    is tagged with a role using the same role list as Contacts, so a filter means the
+    same thing on both tabs.
+  </p>
+  <div class="chart">
+    <div class="chart-title">Jobs with a role tag</div>
+    <div class="chart-sub">Many titles are site navigation (e.g. "Bekijk vacature", "Apply now") picked up by the extractor, which keeps the untagged share high</div>
+    <div class="stack-row">
+      <div class="lbl">930 jobs</div>
+      <div class="stack">
+        <div class="seg c1" style="width:31.3%" tabindex="0" data-tip="Role tagged · 291 (31%)">291</div>
+        <div class="seg c2" style="width:68.7%" tabindex="0" data-tip="No role matched · 639 (69%)">639</div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="c1"></i>Role tagged</span><span><i class="c2"></i>No role matched</span></div>
+  </div>
+  <div class="chart">
+    <div class="chart-title">Tagged jobs by role</div>
+    <div class="chart-sub">The 291 tagged jobs</div>
+    <div class="bars">
+      <div class="lbl">Admin / Office</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Admin / Office · 56"></div></div><div class="val">56</div>
+      <div class="lbl">Service / Field</div><div class="track"><div class="fill" style="width:71.4%" tabindex="0" data-tip="Service / Field · 40"></div></div><div class="val">40</div>
+      <div class="lbl">Project Engineer</div><div class="track"><div class="fill" style="width:66.1%" tabindex="0" data-tip="Project Engineer · 37"></div></div><div class="val">37</div>
+      <div class="lbl">Sales / Commercial</div><div class="track"><div class="fill" style="width:46.4%" tabindex="0" data-tip="Sales / Commercial · 26"></div></div><div class="val">26</div>
+      <div class="lbl">Production / Ops</div><div class="track"><div class="fill" style="width:46.4%" tabindex="0" data-tip="Production / Ops · 26"></div></div><div class="val">26</div>
+      <div class="lbl">Marketing</div><div class="track"><div class="fill" style="width:42.9%" tabindex="0" data-tip="Marketing · 24"></div></div><div class="val">24</div>
+      <div class="lbl">Consultant</div><div class="track"><div class="fill" style="width:25%" tabindex="0" data-tip="Consultant · 14"></div></div><div class="val">14</div>
+      <div class="lbl">HR</div><div class="track"><div class="fill" style="width:25%" tabindex="0" data-tip="HR · 14"></div></div><div class="val">14</div>
+      <div class="lbl">Intern / Trainee</div><div class="track"><div class="fill" style="width:25%" tabindex="0" data-tip="Intern / Trainee · 14"></div></div><div class="val">14</div>
+      <div class="lbl">Procurement</div><div class="track"><div class="fill" style="width:21.4%" tabindex="0" data-tip="Procurement · 12"></div></div><div class="val">12</div>
+      <div class="lbl">Project Manager</div><div class="track"><div class="fill" style="width:14.3%" tabindex="0" data-tip="Project Manager · 8"></div></div><div class="val">8</div>
+      <div class="lbl">Finance</div><div class="track"><div class="fill" style="width:12.5%" tabindex="0" data-tip="Finance · 7"></div></div><div class="val">7</div>
+      <div class="lbl">Design / Creative</div><div class="track"><div class="fill" style="width:12.5%" tabindex="0" data-tip="Design / Creative · 7"></div></div><div class="val">7</div>
+      <div class="lbl">Other (4 roles)</div><div class="track"><div class="fill" style="width:10.7%" tabindex="0" data-tip="Architect 2 · Executive 2 · HSE 1 · Product Mgr 1"></div></div><div class="val">6</div>
+    </div>
+  </div>
+  <p>
+    For the future jobs board the roles that matter most are project engineers, project and
+    construction managers, architects, HSE and procurement. Today they account for about
+    60 of the 930 listings, which is why classification quality is on the improvement list.
+  </p>
+
+  <h3>4.4 News</h3>
+  <div class="chart">
+    <div class="chart-title">News items by tagging outcome</div>
+    <div class="chart-sub">Of 2,328 extracted links, about one in five is a "read more" button or a date rather than an article</div>
+    <div class="stack-row">
+      <div class="lbl">2,328 items</div>
+      <div class="stack">
+        <div class="seg c1" style="width:19.1%" tabindex="0" data-tip="Real article, topic tagged · 445 (19%)">445</div>
+        <div class="seg c3" style="width:20.2%" tabindex="0" data-tip="Navigation noise (read-more links, dates) · 471 (20%)">471</div>
+        <div class="seg c2" style="width:60.7%" tabindex="0" data-tip="Real article, no topic matched · 1,412 (61%)">1,412</div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="c1"></i>Topic tagged</span><span><i class="c3"></i>Navigation noise</span><span><i class="c2"></i>No topic matched</span></div>
+  </div>
+  <div class="chart">
+    <div class="chart-title">Tagged news by topic</div>
+    <div class="chart-sub">The 445 real articles that matched a topic</div>
+    <div class="bars">
+      <div class="lbl">Blog / update</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Blog / update · 106"></div></div><div class="val">106</div>
+      <div class="lbl">Innovation / R&amp;D</div><div class="track"><div class="fill" style="width:63.2%" tabindex="0" data-tip="Innovation / R&amp;D · 67"></div></div><div class="val">67</div>
+      <div class="lbl">Trade show / event</div><div class="track"><div class="fill" style="width:55.7%" tabindex="0" data-tip="Trade show / event · 59"></div></div><div class="val">59</div>
+      <div class="lbl">Partnership / M&amp;A</div><div class="track"><div class="fill" style="width:51.9%" tabindex="0" data-tip="Partnership / M&amp;A · 55"></div></div><div class="val">55</div>
+      <div class="lbl">Award</div><div class="track"><div class="fill" style="width:38.7%" tabindex="0" data-tip="Award · 41"></div></div><div class="val">41</div>
+      <div class="lbl">Sustainability / ESG</div><div class="track"><div class="fill" style="width:30.2%" tabindex="0" data-tip="Sustainability / ESG · 32"></div></div><div class="val">32</div>
+      <div class="lbl">Interview / opinion</div><div class="track"><div class="fill" style="width:17.0%" tabindex="0" data-tip="Interview / opinion · 18"></div></div><div class="val">18</div>
+      <div class="lbl">Regulation / policy</div><div class="track"><div class="fill" style="width:11.3%" tabindex="0" data-tip="Regulation / policy · 12"></div></div><div class="val">12</div>
+      <div class="lbl">Webinar / training</div><div class="track"><div class="fill" style="width:10.4%" tabindex="0" data-tip="Webinar / training · 11"></div></div><div class="val">11</div>
+      <div class="lbl">Customer case</div><div class="track"><div class="fill" style="width:10.4%" tabindex="0" data-tip="Customer case · 11"></div></div><div class="val">11</div>
+      <div class="lbl">Product launch</div><div class="track"><div class="fill" style="width:9.4%" tabindex="0" data-tip="Product launch · 10"></div></div><div class="val">10</div>
+      <div class="lbl">Facility expansion</div><div class="track"><div class="fill" style="width:8.5%" tabindex="0" data-tip="Facility expansion · 9"></div></div><div class="val">9</div>
+      <div class="lbl">Personnel</div><div class="track"><div class="fill" style="width:7.5%" tabindex="0" data-tip="Personnel · 8"></div></div><div class="val">8</div>
+      <div class="lbl">Financial results</div><div class="track"><div class="fill" style="width:5.7%" tabindex="0" data-tip="Financial results · 6"></div></div><div class="val">6</div>
+    </div>
+  </div>
+
+  <h3>4.5 Sources</h3>
+  <div class="chart">
+    <div class="chart-title">How each input list can be fetched</div>
+    <div class="chart-sub">Plain HTTP is free and fast; Firecrawl renders JavaScript pages for a credit each</div>
+    <div class="stack-row">
+      <div class="lbl">Trade shows (26)</div>
+      <div class="stack">
+        <div class="seg c1" style="width:53.8%" tabindex="0" data-tip="Plain HTTP · 14 trade shows (FoodTech-style and Easyfairs-style pages)">14</div>
+        <div class="seg c2" style="width:34.6%" tabindex="0" data-tip="Needs Firecrawl · 9 trade shows (JavaScript-rendered lists)">9</div>
+        <div class="seg c3" style="width:11.5%" tabindex="0" data-tip="Blocked / unsupported · 3 (LinkedIn, Vakbeurs Energie, Safety Event)">3</div>
+      </div>
+    </div>
+    <div class="stack-row">
+      <div class="lbl">Media portals (9)</div>
+      <div class="stack">
+        <div class="seg c1" style="width:33.3%" tabindex="0" data-tip="Plain HTTP works but the parser returns 0 entries · 3 portals">3</div>
+        <div class="seg c2" style="width:55.6%" tabindex="0" data-tip="Needs Firecrawl · 5 portals build their list with JavaScript">5</div>
+        <div class="seg c3" style="width:11.1%" tabindex="0" data-tip="Blocked · 1 portal returns HTTP 403">1</div>
+      </div>
+    </div>
+    <div class="legend"><span><i class="c1"></i>Plain HTTP</span><span><i class="c2"></i>Needs Firecrawl</span><span><i class="c3"></i>Blocked / unsupported</span></div>
+  </div>
+  <div class="chart">
+    <div class="chart-title">Exhibitors found on the last scrape, by parser</div>
+    <div class="chart-sub">Firecrawl sources are fewer but larger (TechniShow, BouwBeurs, VSK)</div>
+    <div class="bars">
+      <div class="lbl">Firecrawl (9 sources)</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Firecrawl · 776 exhibitors from 9 sources"></div></div><div class="val">776</div>
+      <div class="lbl">FoodTech-style (3)</div><div class="track"><div class="fill" style="width:40.2%" tabindex="0" data-tip="FoodTech-style · 312 exhibitors from 3 sources"></div></div><div class="val">312</div>
+      <div class="lbl">Easyfairs-style (11)</div><div class="track"><div class="fill" style="width:19.7%" tabindex="0" data-tip="Easyfairs-style · 153 exhibitors from 11 sources (only the first ~20 per show are public)"></div></div><div class="val">153</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="doc" id="deployed">
+  <div class="stage-tag"><span class="n">5</span>What is deployed</div>
+  <h2>Live versus local</h2>
+  <p class="section-lede">
+    The code and the data are in different states. The database already contains
+    everything described above. The website people see still runs the July version
+    of the code.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Component</th><th>Where it is</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><b>Web app (live)</b><br><span class="muted">release v38, commit <code>bd450e6</code>, 16 July 2026</span></td><td>Heroku, one Basic web dyno, 3 worker processes</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
+        <tr><td><b>Database</b><br><span class="muted">Postgres essential-0</span></td><td>Heroku add-on</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live</span></td></tr>
+        <tr><td><b>New tables and columns</b><br><span class="muted">contacts, taxonomy, category / role / topic tags</span></td><td>Created in production on 8 October</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live in database</span></td></tr>
+        <tr><td><b>Excel import + tagging</b><br><span class="muted">1,876 companies, 791 contacts, tags on jobs and news</span></td><td>Written to production on 8–9 October</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Live in database</span></td></tr>
+        <tr><td><b>Redesigned interface</b><br><span class="muted">Dashboard, Contacts, Taxonomy, Export, grouped navigation, filters, pagination</span></td><td>Local working copy only; not committed or pushed</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Not deployed</span></td></tr>
+        <tr><td><b>Daily schedule</b><br><span class="muted">Heroku Scheduler add-on</span></td><td>Add-on installed; no run recorded since 16 July</td><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>Not running</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <svg width="18" height="18" style="color:var(--warn)"><use href="#i-warn"/></svg>
+    <div>
+      <p><b>Two things to know before using the live site.</b></p>
+      <p>1. The live Companies tab has no pagination and now loads all 3,066 rows (about 4 MB), so it is slow.</p>
+      <p>2. The live "Enrich all pending" button would now run the paid chain over the 1,876 imported companies. At past rates that is roughly $38. Those companies already have most fields from the Excel, so this is probably not wanted yet (see <a href="#costs">section 8</a>).</p>
+    </div>
+  </div>
+
+  <h3>How to deploy the redesign</h3>
+  <p>From the repository folder, after reviewing the changes:</p>
+  <p><code>git add -A &amp;&amp; git commit -m "EPCM pilot revamp" &amp;&amp; git push heroku main</code></p>
+  <p>The database needs nothing further: tables are created automatically when the app starts, and that step is safe to repeat. To undo a bad deploy: <code>heroku releases:rollback -a hi-engineer-app</code>.</p>
+
+  <h3>Configuration</h3>
+  <p>Secrets live in Heroku config variables, never in the code. The app expects:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>DATABASE_URL</code></td><td>Postgres connection, managed by the add-on</td></tr>
+        <tr><td><code>SECRET_KEY</code></td><td>Signs login sessions</td></tr>
+        <tr><td><code>ICYPEAS_API_KEY</code>, <code>ICYPEAS_USD_PER_CREDIT</code></td><td>First enrichment provider and its credit price ($0.019)</td></tr>
+        <tr><td><code>APOLLO_API_KEY</code></td><td>Fourth enrichment provider</td></tr>
+        <tr><td><code>FULLENRICH_API_KEY</code>, <code>AI_ARK_API_KEY</code></td><td>Second and third providers, currently switched off</td></tr>
+        <tr><td><code>FIRECRAWL_API_KEY</code></td><td>Renders JavaScript trade-show pages</td></tr>
+        <tr><td><code>SCRAPED_AT_DISPLAY</code></td><td>Fixed "scraped at" label on the Scraping Engine tab</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="doc" id="how">
+  <div class="stage-tag"><span class="n">6</span>How it works</div>
+  <h2>The pipeline, stage by stage</h2>
+  <p class="section-lede">Each stage below says what goes in, what happens, what comes out, and the file that does it.</p>
+
+  <h3>Stage 1 · Collect</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Trade-show exhibitor lists</h4>
+      <p>Each of the 26 source URLs is stored with a <i>parser</i> that knows its page layout:</p>
+      <ul class="clean">
+        <li><b>FoodTech-style</b> (3): one plain request returns every exhibitor card.</li>
+        <li><b>Easyfairs-style</b> (11): plain request; only the first ~20 exhibitors per show are public, so names are read from the link addresses.</li>
+        <li><b>Firecrawl</b> (9): the list is drawn by JavaScript, so Firecrawl renders it in a browser first, then one of five extractors reads it.</li>
+        <li><b>Unsupported</b> (3): kept on the list so the reason is visible.</li>
+      </ul>
+      <p class="muted">Files: <code>scrapers/event_sources.py</code>, <code>scrapers/exhibitors.py</code>, <code>scrapers/firecrawl.py</code></p>
+    </div>
+    <div class="card">
+      <h4>Master Excel import</h4>
+      <p>A one-off command reads every sheet of the workbook and writes it to the database:</p>
+      <ul class="clean">
+        <li>Companies are matched by name; new ones are added, existing ones get blanks filled.</li>
+        <li>Jobs and news page addresses already found by the scrapers are never overwritten.</li>
+        <li>Contacts are matched by personal LinkedIn address, so re-running does not duplicate them.</li>
+      </ul>
+      <p class="muted">File: <code>import_excel.py</code> · run: <code>python import_excel.py "&lt;path&gt;.xlsx"</code> (add <code>--dry-run</code> to preview)</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h4>Media portals</h4>
+    <p>Nine industrial and food portals are fetched with plain requests. None currently yields a company list: five need JavaScript, one blocks the server with HTTP 403, and three return pages where the parser finds nothing. <span class="muted">File: <code>scrapers/media.py</code></span></p>
+  </div>
+
+  <h3>Stage 2 · Normalise</h3>
+  <p>
+    Every exhibitor becomes one row in the <code>companies</code> table, keyed by company name. If the same
+    company appears at two shows, the row is updated rather than duplicated, and fields that a later step
+    filled in are kept. <span class="muted">File: <code>normalize.py</code></span>
+  </p>
+
+  <h3>Stage 3 · Enrich</h3>
+  <p>
+    Each company is passed through a chain of data providers, cheapest first. As soon as the key fields
+    are filled, the chain stops, which keeps cost down.
+  </p>
+  <div class="flow">
+    <div class="flow-step"><div class="n">1 · on</div><h4>IcyPeas</h4><p>People search returns company website, LinkedIn, industry.</p></div>
+    <div class="flow-step"><div class="n">2 · off</div><h4>FullEnrich</h4><p>Switched off: account out of credit.</p></div>
+    <div class="flow-step"><div class="n">3 · off</div><h4>AI Ark</h4><p>Switched off: account out of credit.</p></div>
+    <div class="flow-step"><div class="n">4 · on</div><h4>Apollo</h4><p>Organisation lookup by domain; fills what IcyPeas missed.</p></div>
+    <div class="flow-step"><div class="n">5 · free</div><h4>Site probe</h4><p>Tries <code>/nieuws</code>, <code>/news</code>, <code>/vacatures</code>, <code>/careers</code>… on the website.</p></div>
+  </div>
+  <div class="chart">
+    <div class="chart-title">How often each provider found something</div>
+    <div class="chart-sub">Hit rate over all attempts since May (2,547 attempts in total)</div>
+    <div class="bars">
+      <div class="lbl">IcyPeas</div><div class="track"><div class="fill" style="width:69.8%" tabindex="0" data-tip="IcyPeas · 833 hits of 1,193 attempts (70%)"></div></div><div class="val">833 / 1,193 · 70%</div>
+      <div class="lbl">Site probe</div><div class="track"><div class="fill" style="width:62.9%" tabindex="0" data-tip="Site probe · 494 hits of 785 attempts (63%)"></div></div><div class="val">494 / 785 · 63%</div>
+      <div class="lbl">Apollo</div><div class="track"><div class="fill" style="width:21.7%" tabindex="0" data-tip="Apollo · 108 hits of 497 attempts (22%)"></div></div><div class="val">108 / 497 · 22%</div>
+      <div class="lbl">AI Ark</div><div class="track"><div class="fill zero" style="width:0" tabindex="0" data-tip="AI Ark · 0 of 36 (switched off since)"></div></div><div class="val">0 / 36</div>
+      <div class="lbl">FullEnrich</div><div class="track"><div class="fill zero" style="width:0" tabindex="0" data-tip="FullEnrich · 0 of 36 (switched off since)"></div></div><div class="val">0 / 36</div>
+    </div>
+  </div>
+  <p>
+    A company ends as <b>enriched</b> when at least one provider filled data, or <b>terminal</b> when all were tried
+    and nothing was found. Every attempt is recorded with its duration and cost, and shown live on the Logs tab.
+    <span class="muted">Files: <code>enrichers/cascade.py</code> and one file per provider in <code>enrichers/</code></span>
+  </p>
+
+  <h3>Stage 4 · Discover content</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Jobs pipeline</h4>
+      <p>For each company with a website: use the known jobs page or probe common paths, fetch it, collect links that look like vacancies, and save them.</p>
+      <p class="muted">File: <code>scrapers/jobs_pipeline.py</code></p>
+    </div>
+    <div class="card">
+      <h4>Articles pipeline</h4>
+      <p>The same steps for the news or blog page. Each item keeps a "first seen" and "last seen" date, so re-runs add new items and refresh old ones without duplicates.</p>
+      <p class="muted">File: <code>scrapers/articles_pipeline.py</code></p>
+    </div>
+  </div>
+  <p style="margin-top:14px">Both share one link extractor that strips page headers, footers and menus before reading links (<code>scrapers/listing_extractor.py</code>). It still lets some buttons through, which is why "navigation noise" appears in the data.</p>
+
+  <h3>Stage 5 · Classify</h3>
+  <div class="grid g3">
+    <div class="card">
+      <h4>Company → category</h4>
+      <p>The free-text category from the Excel or the trade show is matched against keyword rules and mapped to one of 11 top-level categories.</p>
+      <p class="muted"><code>taxonomy.py</code></p>
+    </div>
+    <div class="card">
+      <h4>Job / contact → role</h4>
+      <p>The title is matched against 27 role rules, engineering roles first (MEP, Civil, Structural, Process, Automation, E&amp;I, BIM), then PM, construction manager, architect, HSE, procurement and others.</p>
+      <p class="muted"><code>scrapers/role_classifier.py</code></p>
+    </div>
+    <div class="card">
+      <h4>News → topic</h4>
+      <p>The title is matched against 15 topic rules (launch, partnership, trade show, award, sustainability…). "Read more" buttons and dates are tagged as noise.</p>
+      <p class="muted"><code>scrapers/topic_classifier.py</code></p>
+    </div>
+  </div>
+  <details class="more">
+    <summary>The 11 top-level categories and their sub-categories</summary>
+    <div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Sub-categories</th></tr></thead>
+          <tbody>
+            <tr><td>Manufacturing &amp; Production</td><td>Additive Manufacturing · Process Engineering · Production Planning · Supply Chain &amp; Logistics</td></tr>
+            <tr><td>Building &amp; Facilities</td><td>Infrastructure · Facilities (Maintenance, Security)</td></tr>
+            <tr><td>Design &amp; Engineering</td><td>Structural · Architectural Design · Mechanical · Electrical · Plumbing &amp; Fire Protection</td></tr>
+            <tr><td>Sustainability &amp; Environment</td><td class="muted">—</td></tr>
+            <tr><td>Safety, Health</td><td>Fire Safety</td></tr>
+            <tr><td>Project Management &amp; Strategy</td><td>CapEx · PMO · Procurement</td></tr>
+            <tr><td>Construction Management</td><td class="muted">—</td></tr>
+            <tr><td>Equipment &amp; Machinery</td><td>Production Line / Assembly Line · Packaging</td></tr>
+            <tr><td>Plant Management</td><td class="muted">—</td></tr>
+            <tr><td>Smart Manufacturing</td><td>Industrial Automation · Advanced Technologies · Robotics · Digitalization &amp; AI · Software</td></tr>
+            <tr><td>Construction &amp; Renovation</td><td class="muted">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <h3>Stage 6 · Export</h3>
+  <p>
+    The Export tab streams four CSV files straight from the database and offers an Airtable base schema
+    (<code>airtable_schema.json</code>) that defines four tables — Companies, Contacts, Jobs, Articles —
+    with the right field types (email, URL, single select…). Softr reads from Airtable, so the same
+    schema serves both options under evaluation.
+  </p>
+
+  <h3>Where everything is stored</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Table</th><th class="num">Rows</th><th>Holds</th></tr></thead>
+      <tbody>
+        <tr><td><code>companies</code></td><td class="num">3,066</td><td>The supplier directory</td></tr>
+        <tr><td><code>contacts</code></td><td class="num">791</td><td>People at suppliers, with role tags</td></tr>
+        <tr><td><code>taxonomy_terms</code></td><td class="num">33</td><td>11 categories + 22 sub-categories</td></tr>
+        <tr><td><code>jobs</code></td><td class="num">930</td><td>Job listings, with role tags</td></tr>
+        <tr><td><code>articles</code></td><td class="num">2,328</td><td>News items, with topic tags</td></tr>
+        <tr><td><code>event_sources</code></td><td class="num">26</td><td>Trade-show URLs and their parsers</td></tr>
+        <tr><td><code>company_enrichment_log</code></td><td class="num">2,547</td><td>Every enrichment attempt, its result and cost</td></tr>
+        <tr><td><code>scrape_runs</code> / <code>scrape_events</code></td><td class="num">33 / 7,986</td><td>Every run and every step inside it</td></tr>
+        <tr><td><code>users</code></td><td class="num">—</td><td>Login accounts</td></tr>
+        <tr><td><code>app_cache</code></td><td class="num">3</td><td>Raw results of the original scrapers</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section class="doc" id="cadence">
+  <div class="stage-tag"><span class="n">7</span>Cadence</div>
+  <h2>How often things run</h2>
+  <p class="section-lede">
+    Everything can be started by hand from the interface. A daily schedule was designed
+    in July, but the run history shows it is not active: the last run of any kind was on
+    16 July 2026.
+  </p>
+
+  <div class="chart">
+    <div class="chart-title">Runs per month</div>
+    <div class="chart-sub">All run types: scrapes, enrichment, jobs and articles pipelines, imports</div>
+    <div class="cols">
+      <div class="col"><div class="cv">6</div><div class="bar" style="height:26.1%" tabindex="0" data-tip="May 2026 · 6 runs"></div></div>
+      <div class="col"><div class="cv">4</div><div class="bar" style="height:17.4%" tabindex="0" data-tip="June 2026 · 4 runs"></div></div>
+      <div class="col"><div class="cv">23</div><div class="bar" style="height:100%" tabindex="0" data-tip="July 2026 · 23 runs"></div></div>
+      <div class="col"><div class="cv">0</div><div class="bar" style="height:0" tabindex="0" data-tip="August 2026 · no runs"></div></div>
+      <div class="col"><div class="cv">0</div><div class="bar" style="height:0" tabindex="0" data-tip="September 2026 · no runs"></div></div>
+      <div class="col"><div class="cv">0</div><div class="bar" style="height:0" tabindex="0" data-tip="October 2026 (to date) · no runs"></div></div>
+    </div>
+    <div class="col-labels"><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Job</th><th>How it is triggered</th><th>Last run</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Trade-show scrape</td><td>Button on Scraping Engine (one source or all)</td><td>16 Jul 2026</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Manual</span></td></tr>
+        <tr><td>Media-portal scrape</td><td>Button on Content Engine</td><td>June 2026</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Manual</span></td></tr>
+        <tr><td>Enrichment</td><td>Per-company button, or "Enrich all pending" in batches of 10</td><td>July 2026</td><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Manual</span></td></tr>
+        <tr><td>Jobs pipeline</td><td>Designed: Heroku Scheduler daily at 02:00 UTC (<code>python bulk_pipeline.py jobs</code>)</td><td>July 2026</td><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>Schedule not running</span></td></tr>
+        <tr><td>Articles pipeline</td><td>Designed: Heroku Scheduler daily at 03:00 UTC (<code>python bulk_pipeline.py articles</code>)</td><td>July 2026</td><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>Schedule not running</span></td></tr>
+        <tr><td>Excel import</td><td>Command line, when a new workbook arrives</td><td>8–9 Oct 2026</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Done</span></td></tr>
+        <tr><td>Logs and Stats refresh</td><td>Automatic in the browser (every 1 s and 7 s)</td><td>—</td><td><span class="pill good"><svg width="14" height="14"><use href="#i-ok"/></svg>Automatic</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Recommended cadence</h3>
+  <p>A cadence that keeps the data fresh at low cost, once the schedule is switched on:</p>
+  <div class="grid g3">
+    <div class="card"><div class="k">Daily</div><h4 style="margin-top:6px">Jobs and articles</h4><p>Both pipelines. Plain HTTP only, so no provider cost — only a few minutes of dyno time.</p></div>
+    <div class="card"><div class="k">Weekly</div><h4 style="margin-top:6px">Trade-show scrape</h4><p>All 26 sources. Exhibitor lists change slowly; weekly uses about 36 Firecrawl credits a month.</p></div>
+    <div class="card"><div class="k">On demand</div><h4 style="margin-top:6px">Enrichment &amp; import</h4><p>Enrich new companies in batches you choose; re-import the Excel whenever it changes.</p></div>
+  </div>
+  <div class="callout info">
+    <svg width="18" height="18" style="color:var(--accent)"><use href="#i-info"/></svg>
+    <div><p>To check or set the schedule: <code>heroku addons:open scheduler -a hi-engineer-app</code>. The Scheduler add-on itself is free; jobs use dyno time while they run.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ 8 -->
+<section class="doc" id="costs">
+  <div class="stage-tag"><span class="n">8</span>Costs</div>
+  <h2>What it costs</h2>
+  <p class="section-lede">
+    There are two kinds of cost: a small fixed monthly bill for hosting, and pay-per-use
+    credits for data providers. Scraping with plain requests is free.
+  </p>
+
+  <h3>Fixed monthly</h3>
+  <div class="grid g4">
+    <div class="card kpi"><div class="k">Web dyno</div><div class="v">$7</div><div class="sub">Heroku Basic, per month</div></div>
+    <div class="card kpi"><div class="k">Database</div><div class="v">$5</div><div class="sub">Postgres essential-0, per month</div></div>
+    <div class="card kpi"><div class="k">Scheduler</div><div class="v">$0</div><div class="sub">add-on is free; jobs use dyno time</div></div>
+    <div class="card kpi"><div class="k">Firecrawl plan</div><div class="v">1,000</div><div class="sub">credits a month; price in the Firecrawl dashboard</div></div>
+  </div>
+  <p style="margin-top:12px">Heroku hosting comes to about <b>$12 a month</b>. The Firecrawl balance is 1,525 credits for the period ending 23 October, the same figure as in August, which is consistent with no Firecrawl use since the July scrapes.</p>
+
+  <h3>Usage to date</h3>
+  <div class="chart">
+    <div class="chart-title">Provider spend since May 2026</div>
+    <div class="chart-sub">From the per-attempt enrichment log</div>
+    <div class="bars">
+      <div class="lbl">Apollo</div><div class="track"><div class="fill" style="width:100%" tabindex="0" data-tip="Apollo · $23.40 (468 credits at $0.05 each, as assumed in the code)"></div></div><div class="val">$23.40</div>
+      <div class="lbl">IcyPeas</div><div class="track"><div class="fill" style="width:3.4%" tabindex="0" data-tip="IcyPeas · $0.79 (41.78 credits at $0.019)"></div></div><div class="val">$0.79</div>
+      <div class="lbl">Site probe</div><div class="track"><div class="fill zero" style="width:0" tabindex="0" data-tip="Site probe · free (plain HTTP)"></div></div><div class="val">$0</div>
+      <div class="lbl">FullEnrich, AI Ark</div><div class="track"><div class="fill zero" style="width:0" tabindex="0" data-tip="FullEnrich and AI Ark · free tier, now switched off"></div></div><div class="val">$0</div>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card kpi"><div class="k">Enrichment total</div><div class="v">$24.19</div><div class="sub">for 1,190 companies processed</div></div>
+    <div class="card kpi"><div class="k">Per company</div><div class="v">≈ $0.02</div><div class="sub">average across enriched and terminal</div></div>
+    <div class="card kpi"><div class="k">Apollo share</div><div class="v">97%</div><div class="sub">of provider spend, for 22% hit rate</div></div>
+  </div>
+
+  <div class="callout warn">
+    <svg width="18" height="18" style="color:var(--warn)"><use href="#i-warn"/></svg>
+    <div>
+      <p><b>The Logs tab shows a lower total ($10.87).</b> It converts every credit at the IcyPeas price of $0.019, including Apollo's, while the enrichment log prices Apollo at $0.05 per credit. The real Apollo price depends on the plan, so treat $24 as the better estimate and check the Apollo invoice for the exact figure.</p>
+    </div>
+  </div>
+
+  <h3>What the next steps would cost</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Action</th><th>Basis</th><th class="num">Estimate</th></tr></thead>
+      <tbody>
+        <tr><td>Daily jobs + articles pipelines</td><td>Plain HTTP, dyno time only</td><td class="num">$0 extra</td></tr>
+        <tr><td>Weekly trade-show scrape</td><td>9 Firecrawl sources × ~4 runs</td><td class="num">~36 credits / month</td></tr>
+        <tr><td>Daily trade-show scrape</td><td>9 × 30</td><td class="num">~270 credits / month</td></tr>
+        <tr><td>Add the 5 JavaScript media portals, daily</td><td>14 × 30</td><td class="num">~420 credits / month</td></tr>
+        <tr><td>Full enrichment chain on the 1,876 imported companies</td><td>≈ $0.02 per company, past average</td><td class="num">≈ $38 one-off</td></tr>
+        <tr><td>Only the free site probe on those companies</td><td>Most already have website and email from the Excel</td><td class="num">$0</td></tr>
+        <tr><td>Find emails for the 777 contacts without one</td><td>IcyPeas email search, 1 credit each at $0.019; hit rate unknown</td><td class="num">≈ $15</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>All Firecrawl options above fit inside the current 1,000-credit monthly plan. Only an hourly schedule would need a bigger plan.</p>
+</section>
+
+<!-- ============================================================ 9 -->
+<section class="doc" id="issues">
+  <div class="stage-tag"><span class="n">9</span>Known gaps</div>
+  <h2>What is not working yet</h2>
+  <p class="section-lede">Listed by impact on the guide, highest first.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Gap</th><th>Effect</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Schedule not running</b></td><td>No new jobs, news or exhibitors since 16 July</td><td>Add the two daily jobs in Heroku Scheduler</td></tr>
+        <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Redesign not deployed</b></td><td>The live site is slow on Companies and lacks Contacts, Taxonomy and Export</td><td>Commit and push (section 5)</td></tr>
+        <tr><td><span class="pill bad"><svg width="14" height="14"><use href="#i-bad"/></svg>High</span><br><b>Contact emails</b></td><td>777 of 791 contacts have no email</td><td>Pick the contact tool (Apollo, Clay, IcyPeas email search) and run it on a sample first</td></tr>
+        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Uncategorised companies</b></td><td>1,128 companies (37%) have no canonical category</td><td>Richer mapping rules, then a bulk re-tag screen</td></tr>
+        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Role and topic coverage</b></td><td>69% of jobs and 61% of news have no tag; a fifth of news items are buttons or dates</td><td>Filter navigation text at extraction; extend the rules</td></tr>
+        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Media portals</b></td><td>0 of 9 portals produce companies</td><td>Route the 5 JavaScript portals through Firecrawl</td></tr>
+        <tr><td><span class="pill warn"><svg width="14" height="14"><use href="#i-warn"/></svg>Medium</span><br><b>Two Firecrawl shows return 0</b></td><td>ESEF (a hub page) and Maintenance NEXT (likely a consent wall)</td><td>Site-specific handling</td></tr>
+        <tr><td><span class="pill info"><svg width="14" height="14"><use href="#i-info"/></svg>Low</span><br><b>Cost display</b></td><td>Logs tab under-reports Apollo spend</td><td>Store provider-specific prices in <code>costs.py</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <details class="more">
+    <summary>Fixed during this documentation pass (9 October)</summary>
+    <div>
+      <ul class="clean">
+        <li><b>Collapsed contacts.</b> The import read the company's LinkedIn page as each person's ID on the role sheets, merging colleagues into one record. The importer now reads the personal LinkedIn column; the role sheets were re-imported, taking contacts from 690 to 791 with no duplicates.</li>
+        <li><b>Duplicated categories.</b> Seeding twice created a second copy of the 11 top-level categories. The extra copies were removed, a uniqueness rule added, and seeding is now safe to repeat (33 rows).</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="doc" id="next">
+  <div class="stage-tag"><span class="n">10</span>What comes next</div>
+  <h2>Suggested order of work</h2>
+  <div class="roadmap">
+    <div class="rm-step now"><div class="when">Step 1</div><h4>Deploy and schedule</h4><p>Push the redesign; switch on the daily jobs and articles runs and a weekly trade-show scrape.</p></div>
+    <div class="rm-step"><div class="when">Step 2</div><h4>Contacts tool</h4><p>Choose between Apollo and Clay on a 50-contact sample; measure email hit rate and cost per email.</p></div>
+    <div class="rm-step"><div class="when">Step 3</div><h4>Clean categories and tags</h4><p>Assign the 1,128 uncategorised companies; remove navigation noise from jobs and news.</p></div>
+    <div class="rm-step"><div class="when">Step 4</div><h4>Airtable / Softr</h4><p>After the demos, create the base from the exported schema and load the CSVs.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section class="doc" id="glossary">
+  <div class="stage-tag"><span class="n">11</span>Glossary</div>
+  <h2>Terms used in this guide</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><b>EPCM</b></td><td>Engineering, Procurement, Construction Management — the project model the guide's suppliers serve</td></tr>
+        <tr><td><b>Supplier</b></td><td>A company that sells products or services into EPCM projects; one row in <code>companies</code></td></tr>
+        <tr><td><b>Source</b></td><td>A URL the scrapers read from, such as a trade-show exhibitor list</td></tr>
+        <tr><td><b>Parser</b></td><td>The piece of code that knows how to read one kind of source page</td></tr>
+        <tr><td><b>Firecrawl</b></td><td>A paid service that opens a page in a real browser so JavaScript-built content can be read</td></tr>
+        <tr><td><b>Enrichment</b></td><td>Filling in missing company fields using external data providers</td></tr>
+        <tr><td><b>Cascade / chain</b></td><td>Trying providers one after another, cheapest first, stopping when enough is found</td></tr>
+        <tr><td><b>Credit</b></td><td>The unit providers bill in; each has its own dollar price</td></tr>
+        <tr><td><b>Pending · Enriched · Terminal</b></td><td>Not yet tried · at least one provider found data · every provider tried, nothing found</td></tr>
+        <tr><td><b>Canonical category</b></td><td>The single category from the agreed 11-branch tree that the portal will use</td></tr>
+        <tr><td><b>Role tag</b></td><td>The job family of a contact or vacancy, e.g. Project Engineer — MEP</td></tr>
+        <tr><td><b>Topic tag</b></td><td>The kind of news item, e.g. trade show, partnership, sustainability</td></tr>
+        <tr><td><b>Navigation noise</b></td><td>Links captured by mistake: "read more" buttons, menu items, dates</td></tr>
+        <tr><td><b>Run</b></td><td>One execution of a job; every step is logged with time and cost</td></tr>
+        <tr><td><b>Dyno</b></td><td>Heroku's name for the server process that runs the app</td></tr>
+        <tr><td><b>Heroku Scheduler</b></td><td>A Heroku add-on that runs commands at set times</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Hi-Engineer project guide · figures read from the production database on 9 October 2026 ·
+    source code in the <code>hi-engineer</code> repository (see <code>CLAUDE.md</code> for the developer reference).
+  </div>
+</section>
+
+</main>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<script>
+(function () {
+  // Shared tooltip for every element with data-tip (hover and keyboard focus)
+  var tip = document.getElementById('tip');
+  function show(el, x, y) {
+    tip.textContent = el.getAttribute('data-tip');
+    tip.classList.add('on');
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = Math.min(Math.max(8, x - w / 2), window.innerWidth - w - 8);
+    var top = y - h - 12;
+    if (top < 8) top = y + 16;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function hide() { tip.classList.remove('on'); }
+  document.querySelectorAll('[data-tip]').forEach(function (el) {
+    el.addEventListener('mousemove', function (e) { show(el, e.clientX, e.clientY); });
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', function () {
+      var r = el.getBoundingClientRect();
+      show(el, r.left + r.width / 2, r.top);
+    });
+    el.addEventListener('blur', hide);
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+
+  // Highlight the current section in the contents list
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (a) { a.classList.remove('active'); });
+          var a = byId[en.target.id];
+          if (a) a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section.doc').forEach(function (s) { io.observe(s); });
+  }
+
+  // Theme toggle (remembered per browser when storage is available)
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('hi-doc-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('hi-doc-theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

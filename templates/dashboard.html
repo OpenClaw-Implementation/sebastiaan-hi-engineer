@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="trail">Overview · Dashboard</div>
+  <h1>EPCM Guide · Netherlands pilot</h1>
+  <p>
+    Hi-Engineer is the ingest + enrichment layer feeding the public
+    <b>epcmguide.com</b> directory. This page is the one-glance view of pipeline
+    health: how many companies, how much contact + enrichment coverage, how many
+    jobs and news items are flowing through to the directory and jobs board.
+  </p>
+  <details style="margin-top:1rem">
+    <summary style="cursor:pointer; color:var(--muted); font-size:.85rem">
+      New here? → how this app works (click to expand)
+    </summary>
+    <div style="margin-top:.75rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.6rem">
+      <div><b>Ingest</b> → Scraping Engine pulls trade-show exhibitors; Content Engine pulls industrial media portals.</div>
+      <div><b>Directory</b> → Companies list is the master. Contacts are role-tagged people. Taxonomy is the canonical 10-category tree.</div>
+      <div><b>Content</b> → Jobs + Articles tabs show scraped items, each with role / topic filter chips mirroring the taxonomy.</div>
+      <div><b>Operations</b> → Export sends data to Airtable / Softr / CSV. Stats + Logs show pipeline health and run history.</div>
+    </div>
+  </details>
+</section>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Companies</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.c_total) }}</div>
+    <div class="kpi-sub">Supplier directory total</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">With email</div>
+    <div class="kpi-value kpi-good">{{ "{:,}".format(kpis.c_email) }}</div>
+    <div class="kpi-sub">
+      {% set pct = (kpis.c_email * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {{ pct }}% of directory
+      <div class="bar"><span style="width: {{ pct }}%"></span></div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">With website</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.c_site) }}</div>
+    <div class="kpi-sub">
+      {% set pct = (kpis.c_site * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {{ pct }}% of directory
+      <div class="bar"><span style="width: {{ pct }}%"></span></div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Canonical category</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.c_canonical) }}</div>
+    <div class="kpi-sub">
+      {% set pct = (kpis.c_canonical * 100 // kpis.c_total) if kpis.c_total else 0 %}
+      {{ pct }}% classified · {{ "{:,}".format(unassigned) }} unassigned
+    </div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-label">Contacts</div>
+    <div class="kpi-value">{{ "{:,}".format(contacts_count.total) }}</div>
+    <div class="kpi-sub">
+      {{ contacts_count.with_email }} with real email ·
+      {{ (contacts_count.by_role | length) }} roles
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Jobs captured</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.jobs_total) }}</div>
+    <div class="kpi-sub">
+      {{ kpis.jobs_classified }} role-classified ({{ (kpis.jobs_classified * 100 // kpis.jobs_total) if kpis.jobs_total else 0 }}%)
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">News articles</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.art_total) }}</div>
+    <div class="kpi-sub">topic-tagging in cycle 4</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Scrape runs</div>
+    <div class="kpi-value">{{ "{:,}".format(kpis.runs_total) }}</div>
+    <div class="kpi-sub">{{ kpis.src_active }} active sources</div>
+  </div>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>Taxonomy coverage</h3>
+    <p class="muted small">Top-level canonical categories and how many companies live in each. Click a chip to filter the directory.</p>
+    <div class="filter-rail" style="margin-top:.6rem">
+      {% for row in taxonomy_board %}
+        <a class="chip" href="{{ url_for('companies', cat=row.slug) if row.n_companies else '#' }}" title="{{ row.name }}">
+          {{ row.name }}
+          <span class="chip-count">{{ row.n_companies }}</span>
+        </a>
+      {% endfor %}
+      {% if unassigned %}
+        <a class="chip" href="{{ url_for('companies', cat='unassigned') }}" title="Not yet mapped to the canonical taxonomy">
+          (unassigned) <span class="chip-count">{{ unassigned }}</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Contacts by role</h3>
+    <p class="muted small">EPCM-priority roles first — click to filter the Contacts tab.</p>
+    <div class="filter-rail" style="margin-top:.6rem">
+      {% for role, n in contacts_count.by_role.items() %}
+        <a class="chip" href="{{ url_for('contacts', role=role) }}">
+          {{ role.replace('_', ' ') }}
+          <span class="chip-count">{{ n }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Quick links</h3>
+    <ul style="list-style:none; padding:0; margin:.2rem 0; display:flex; flex-direction:column; gap:.5rem">
+      <li><a href="{{ url_for('companies') }}">→ Companies (full directory)</a></li>
+      <li><a href="{{ url_for('contacts') }}">→ Contacts (role-tagged)</a></li>
+      <li><a href="{{ url_for('taxonomy_page') }}">→ Taxonomy editor</a></li>
+      <li><a href="{{ url_for('export_page') }}">→ Export to Airtable / CSV</a></li>
+      <li><a href="{{ url_for('stats') }}">→ Analytics (cascade, fill-rates)</a></li>
+      <li><a href="{{ url_for('logs') }}">→ Logs + costs (recent runs)</a></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

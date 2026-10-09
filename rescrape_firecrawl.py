@@ -48,8 +48,7 @@ def main() -> int:
         print(f"  {s.get('label') or s['url']:60s}  scraped={result['count']:>4}  upserted={added:>4}",
               flush=True)
 
-    db.finish_run(run_id, status="ok",
-                  total_credits=log.credits, total_usd=log.usd)
+    db.finish_run(run_id, status="ok")
     print(f"\nDone in {time.time() - started:.0f}s. "
           f"Scraped {total_scraped}, upserted {total_new}. "
           f"Firecrawl spend: ${log.usd:.4f}", flush=True)

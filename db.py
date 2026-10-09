@@ -247,6 +247,65 @@ def _init_db_unsafe() -> None:
                 created_at timestamptz not null default now()
             );
             create index if not exists event_sources_active_idx on event_sources(active);
+
+            -- Canonical taxonomy (10 top-level + sub-categories).
+            -- Terms with parent_id IS NULL are top-level categories.
+            create table if not exists taxonomy_terms (
+                id serial primary key,
+                name text not null,
+                slug text not null,
+                parent_id int references taxonomy_terms(id) on delete cascade,
+                sort_order int not null default 0,
+                unique (parent_id, slug)
+            );
+            create index if not exists taxonomy_parent_idx on taxonomy_terms(parent_id);
+            delete from taxonomy_terms t
+             where t.parent_id is null
+               and exists (select 1 from taxonomy_terms d
+                            where d.parent_id is null and d.slug = t.slug and d.id < t.id);
+            create unique index if not exists taxonomy_top_slug_unique
+                on taxonomy_terms(slug) where parent_id is null;
+
+            -- Supplier contacts (from Excel Contacts sheet + role-specific sheets +
+            -- future Apollo/Clay enrichment). Role bucket is the EPCM-oriented
+            -- classification (project_engineer_mep, pm, architect, hse, procurement, etc.)
+            create table if not exists contacts (
+                id bigserial primary key,
+                company_id bigint references companies(id) on delete set null,
+                company_name text,
+                name text not null,
+                title text,
+                email text,
+                employees_bucket text,
+                linkedin_url text,
+                linkedin_sales_url text,
+                role_bucket text,
+                role_sub text,
+                source text,
+                notes text,
+                updated_at timestamptz not null default now()
+            );
+            create unique index if not exists contacts_linkedin_unique
+                on contacts(linkedin_url) where linkedin_url is not null and linkedin_url <> '';
+            create index if not exists contacts_company_idx on contacts(company_id);
+            create index if not exists contacts_role_idx on contacts(role_bucket);
+            create index if not exists contacts_name_idx on contacts(lower(name));
+
+            -- Canonical category pointer for companies (added lazily so the
+            -- existing `category_1/2/3` free-form columns stay untouched).
+            alter table companies add column if not exists category_canonical text;
+            alter table companies add column if not exists subcategory_canonical text;
+            create index if not exists companies_canonical_cat_idx on companies(category_canonical);
+
+            -- Role tag for scraped jobs (project_engineer_mep, pm, etc.) — set by
+            -- scrapers.jobs_role_classifier at scrape or backfill time.
+            alter table jobs add column if not exists role_bucket text;
+            create index if not exists jobs_role_idx on jobs(role_bucket);
+
+            -- Topic tag for articles (manufacturing_production, sustainability_env, …)
+            alter table articles add column if not exists topic_tag text;
+            alter table articles add column if not exists relevance text;
+            create index if not exists articles_topic_idx on articles(topic_tag);
             """
         )
     )
@@ -523,7 +582,9 @@ def cumulative_spend() -> dict:
 # Companies + enrichment log (Module 01 normalized directory)
 # --------------------------------------------------------------------------- #
 COMPANY_COLS = (
-    "id, name, category_1, category_2, category_3, location, tel, email, "
+    "id, name, category_1, category_2, category_3, "
+    "category_canonical, subcategory_canonical, "
+    "location, tel, email, "
     "website, news_url, jobs_url, linkedin_url, linkedin_industry, summary, "
     "specialities, event_source, event_pitch, event_profile, logo_url, stand, "
     "enrich_status, enrich_source, enriched_at, updated_at, "
@@ -1124,7 +1185,7 @@ def list_jobs(company_id: int | None = None, since: str | None = None,
         cur.execute(f"""
             select j.id, j.company_id, c.name as company, j.title, j.url, j.location,
                    j.department, j.posted_at, j.source_page,
-                   j.first_seen_at, j.last_seen_at
+                   j.first_seen_at, j.last_seen_at, j.role_bucket
               from jobs j join companies c on c.id = j.company_id
               {w}
               order by j.first_seen_at desc, j.id desc
@@ -1155,7 +1216,7 @@ def list_articles(company_id: int | None = None, since: str | None = None,
         cur.execute(f"""
             select a.id, a.company_id, c.name as company, a.title, a.url,
                    a.published_at, a.summary, a.source_page,
-                   a.first_seen_at, a.last_seen_at
+                   a.first_seen_at, a.last_seen_at, a.topic_tag, a.relevance
               from articles a join companies c on c.id = a.company_id
               {w}
               order by a.first_seen_at desc, a.id desc
@@ -1409,3 +1470,413 @@ def count_event_sources() -> dict:
         result = _run(q); _ok(); return result
     except Exception as e:  # noqa: BLE001
         _fail("count_event_sources", e); return {"active": 0, "inactive": 0, "total": 0}
+
+
+# --------------------------------------------------------------------------- #
+# Taxonomy (10 top-level EPCM categories + sub-categories)
+# --------------------------------------------------------------------------- #
+def seed_taxonomy(terms: list[dict]) -> None:
+    """Upsert taxonomy terms. Pass a list of dicts:
+       {name, slug, parent_slug?, sort_order?}  — parent must be upserted first.
+    Idempotent: re-running updates sort_order; it never deletes rows.
+    """
+    if not using_db():
+        return
+
+    def q(cur):
+        for i, t in enumerate(terms):
+            parent_id = None
+            if t.get("parent_slug"):
+                cur.execute(
+                    "select id from taxonomy_terms "
+                    "where slug = %s and parent_id is null",
+                    (t["parent_slug"],),
+                )
+                row = cur.fetchone()
+                parent_id = row[0] if row else None
+            # Look up first instead of ON CONFLICT: Postgres treats NULL parent_ids
+            # as distinct, so the unique(parent_id, slug) key never fires for
+            # top-level rows and re-seeding would duplicate them.
+            cur.execute(
+                "select id from taxonomy_terms "
+                "where slug = %s and parent_id is not distinct from %s",
+                (t["slug"], parent_id),
+            )
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    "update taxonomy_terms set name = %s, sort_order = %s where id = %s",
+                    (t["name"], t.get("sort_order", i), existing[0]),
+                )
+            else:
+                cur.execute(
+                    "insert into taxonomy_terms (name, slug, parent_id, sort_order) "
+                    "values (%s, %s, %s, %s)",
+                    (t["name"], t["slug"], parent_id, t.get("sort_order", i)),
+                )
+
+    try:
+        _run(q); _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("seed_taxonomy", e)
+
+
+def list_taxonomy() -> list[dict]:
+    """Return rows: {id, name, slug, parent_id, parent_slug, sort_order}."""
+    if not using_db():
+        return []
+
+    def q(cur):
+        cur.execute(
+            """
+            select t.id, t.name, t.slug, t.parent_id, p.slug as parent_slug,
+                   t.sort_order
+            from taxonomy_terms t
+            left join taxonomy_terms p on p.id = t.parent_id
+            order by coalesce(p.sort_order, t.sort_order), t.sort_order, t.name
+            """
+        )
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_taxonomy", e); return []
+
+
+def taxonomy_tree() -> list[dict]:
+    """Nested view: [{name, slug, children: [...]}]."""
+    flat = list_taxonomy()
+    by_id = {t["id"]: {**t, "children": []} for t in flat}
+    roots = []
+    for t in flat:
+        node = by_id[t["id"]]
+        if t["parent_id"] is None:
+            roots.append(node)
+        elif t["parent_id"] in by_id:
+            by_id[t["parent_id"]]["children"].append(node)
+    return roots
+
+
+# --------------------------------------------------------------------------- #
+# Contacts (supplier side)
+# --------------------------------------------------------------------------- #
+CONTACT_COLS = (
+    "c.id, c.company_id, c.company_name, c.name, c.title, c.email, "
+    "c.employees_bucket, c.linkedin_url, c.linkedin_sales_url, "
+    "c.role_bucket, c.role_sub, c.source, c.notes, c.updated_at, "
+    "co.name as resolved_company_name, co.category_canonical as resolved_category"
+)
+
+
+def upsert_contact(contact: dict) -> int | None:
+    """Insert/update a contact. Dedupes on linkedin_url if present, else on
+    (lower(name), coalesce(company_name, '')). Returns id."""
+    if not using_db():
+        return None
+
+    def q(cur):
+        linkedin = (contact.get("linkedin_url") or "").strip() or None
+        company_id = contact.get("company_id")
+        company_name = contact.get("company_name")
+
+        # Resolve company_id from name if missing
+        if company_id is None and company_name:
+            cur.execute(
+                "select id from companies where lower(name) = lower(%s) limit 1",
+                (company_name,),
+            )
+            row = cur.fetchone()
+            if row:
+                company_id = row[0]
+
+        # Look for existing match
+        existing_id = None
+        if linkedin:
+            cur.execute(
+                "select id from contacts where linkedin_url = %s", (linkedin,)
+            )
+            row = cur.fetchone()
+            if row:
+                existing_id = row[0]
+        if existing_id is None and contact.get("name"):
+            cur.execute(
+                """select id from contacts
+                   where lower(name) = lower(%s)
+                     and coalesce(lower(company_name),'') =
+                         coalesce(lower(%s),'')
+                   limit 1""",
+                (contact["name"], company_name or ""),
+            )
+            row = cur.fetchone()
+            if row:
+                existing_id = row[0]
+
+        if existing_id:
+            cur.execute(
+                """update contacts set
+                     company_id          = coalesce(%s, company_id),
+                     company_name        = coalesce(%s, company_name),
+                     title               = coalesce(%s, title),
+                     email               = coalesce(nullif(%s,''), email),
+                     employees_bucket    = coalesce(%s, employees_bucket),
+                     linkedin_url        = coalesce(%s, linkedin_url),
+                     linkedin_sales_url  = coalesce(%s, linkedin_sales_url),
+                     role_bucket         = coalesce(%s, role_bucket),
+                     role_sub            = coalesce(%s, role_sub),
+                     source              = coalesce(%s, source),
+                     notes               = coalesce(%s, notes),
+                     updated_at          = now()
+                   where id = %s
+                   returning id""",
+                (
+                    company_id, company_name,
+                    contact.get("title"), contact.get("email"),
+                    contact.get("employees_bucket"), linkedin,
+                    contact.get("linkedin_sales_url"),
+                    contact.get("role_bucket"), contact.get("role_sub"),
+                    contact.get("source"), contact.get("notes"),
+                    existing_id,
+                ),
+            )
+            return cur.fetchone()[0]
+
+        cur.execute(
+            """insert into contacts
+                 (company_id, company_name, name, title, email,
+                  employees_bucket, linkedin_url, linkedin_sales_url,
+                  role_bucket, role_sub, source, notes)
+               values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               returning id""",
+            (
+                company_id, company_name, contact.get("name"),
+                contact.get("title"), contact.get("email"),
+                contact.get("employees_bucket"), linkedin,
+                contact.get("linkedin_sales_url"),
+                contact.get("role_bucket"), contact.get("role_sub"),
+                contact.get("source"), contact.get("notes"),
+            ),
+        )
+        return cur.fetchone()[0]
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("upsert_contact", e); return None
+
+
+def list_contacts(role_bucket: str | None = None,
+                  company_id: int | None = None,
+                  has_email: bool | None = None,
+                  limit: int | None = None,
+                  offset: int = 0) -> list[dict]:
+    if not using_db():
+        return []
+
+    where = []
+    params: list = []
+    if role_bucket:
+        where.append("c.role_bucket = %s"); params.append(role_bucket)
+    if company_id is not None:
+        where.append("c.company_id = %s"); params.append(company_id)
+    # Note: psycopg2 parses '%' in SQL strings as parameter markers, so
+    # LIKE patterns need their '%' doubled when there are %s params in the query.
+    if has_email is True:
+        where.append("c.email is not null and c.email <> '' and c.email like %s")
+        params.append("%@%")
+    if has_email is False:
+        where.append("(c.email is null or c.email = '' or c.email not like %s)")
+        params.append("%@%")
+
+    wsql = ("where " + " and ".join(where)) if where else ""
+    lim = ""
+    if limit:
+        lim = f"limit {int(limit)} offset {int(offset)}"
+
+    def q(cur):
+        cur.execute(
+            f"select {CONTACT_COLS} from contacts c "
+            f"left join companies co on co.id = c.company_id "
+            f"{wsql} order by c.company_name, c.name {lim}",
+            tuple(params),
+        )
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("list_contacts", e); return []
+
+
+def count_contacts() -> dict:
+    if not using_db():
+        return {"total": 0, "with_email": 0, "by_role": {}}
+
+    def q(cur):
+        cur.execute(
+            """select
+                 count(*) as total,
+                 count(*) filter (
+                   where email is not null and email <> '' and email like %s
+                 ) as with_email
+               from contacts""",
+            ("%@%",),
+        )
+        row = cur.fetchone() or (0, 0)
+        total, with_email = row
+        cur.execute(
+            "select coalesce(role_bucket, 'unclassified') as rb, "
+            "count(*)::int from contacts group by rb order by 2 desc"
+        )
+        by_role = {rb: n for rb, n in cur.fetchall()}
+        return {
+            "total": int(total or 0),
+            "with_email": int(with_email or 0),
+            "by_role": by_role,
+        }
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("count_contacts", e); return {"total": 0, "with_email": 0, "by_role": {}}
+
+
+# --------------------------------------------------------------------------- #
+# Canonical category helpers (used by import + /directory views)
+# --------------------------------------------------------------------------- #
+def set_company_canonical_category(company_id: int, category_canonical: str,
+                                   subcategory_canonical: str | None = None) -> None:
+    if not using_db():
+        return
+
+    def q(cur):
+        cur.execute(
+            "update companies set category_canonical = %s, "
+            "subcategory_canonical = coalesce(%s, subcategory_canonical), "
+            "updated_at = now() where id = %s",
+            (category_canonical, subcategory_canonical, company_id),
+        )
+    try:
+        _run(q); _ok()
+    except Exception as e:  # noqa: BLE001
+        _fail("set_company_canonical_category", e)
+
+
+def companies_by_canonical() -> list[dict]:
+    """Return per-top-level-category counts for the dashboard tile."""
+    if not using_db():
+        return []
+
+    def q(cur):
+        cur.execute(
+            """select coalesce(category_canonical, '(unassigned)') as category,
+                      count(*)::int as n
+               from companies group by category order by n desc"""
+        )
+        return _dictify(cur)
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("companies_by_canonical", e); return []
+
+
+# --------------------------------------------------------------------------- #
+# Dashboard / filter / export queries (all via _run so a dropped connection
+# reconnects and a DB outage degrades instead of raising a 500)
+# --------------------------------------------------------------------------- #
+_KPI_KEYS = ("c_total", "c_email", "c_site", "c_news", "c_jobs", "c_canonical",
+             "jobs_total", "jobs_classified", "art_total", "runs_total",
+             "src_active")
+
+
+def dashboard_kpis() -> dict:
+    empty = {k: 0 for k in _KPI_KEYS}
+    if not using_db():
+        return empty
+
+    def q(cur):
+        cur.execute("""
+            select
+              (select count(*) from companies),
+              (select count(*) from companies where email like %s),
+              (select count(*) from companies where coalesce(website,'') <> ''),
+              (select count(*) from companies where coalesce(news_url,'') <> ''),
+              (select count(*) from companies where coalesce(jobs_url,'') <> ''),
+              (select count(*) from companies where category_canonical is not null),
+              (select count(*) from jobs),
+              (select count(*) from jobs where role_bucket is not null),
+              (select count(*) from articles),
+              (select count(*) from scrape_runs),
+              (select count(*) from event_sources where active)
+        """, ("%@%",))
+        return {k: int(v or 0) for k, v in zip(_KPI_KEYS, cur.fetchone())}
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("dashboard_kpis", e); return empty
+
+
+def tag_counts(kind: str) -> list[tuple[str, int]]:
+    """[(tag, n)] for jobs.role_bucket or articles.topic_tag, untagged as
+    'unclassified', most frequent first."""
+    table, col = {"jobs": ("jobs", "role_bucket"),
+                  "articles": ("articles", "topic_tag")}[kind]
+    if not using_db():
+        return []
+
+    def q(cur):
+        cur.execute(f"select coalesce({col}, 'unclassified'), count(*)::int "
+                    f"from {table} group by 1 order by 2 desc")
+        return [(t, n) for t, n in cur.fetchall()]
+
+    try:
+        result = _run(q); _ok(); return result
+    except Exception as e:  # noqa: BLE001
+        _fail("tag_counts", e); return []
+
+
+EXPORTS: dict[str, tuple[list[str], str]] = {
+    "companies": (
+        ["name", "category", "subcategory", "location", "email", "tel",
+         "website", "news_url", "jobs_url", "linkedin_url",
+         "linkedin_industry", "summary", "specialities", "event_source"],
+        "select name, category_canonical, subcategory_canonical, location, "
+        "email, tel, website, news_url, jobs_url, linkedin_url, "
+        "linkedin_industry, summary, specialities, event_source "
+        "from companies order by name"),
+    "contacts": (
+        ["name", "company", "title", "email", "linkedin_url", "role_bucket",
+         "role_sub", "employees_bucket"],
+        "select name, company_name, title, email, linkedin_url, role_bucket, "
+        "role_sub, employees_bucket from contacts order by company_name, name"),
+    "jobs": (
+        ["company", "title", "url", "role_bucket", "source_page",
+         "first_seen_at"],
+        "select c.name, j.title, j.url, j.role_bucket, j.source_page, "
+        "j.first_seen_at from jobs j join companies c on c.id = j.company_id "
+        "order by c.name, j.title"),
+    "articles": (
+        ["company", "title", "url", "topic_tag", "relevance", "source_page",
+         "first_seen_at"],
+        "select c.name, a.title, a.url, a.topic_tag, a.relevance, "
+        "a.source_page, a.first_seen_at from articles a "
+        "join companies c on c.id = a.company_id order by c.name, a.title"),
+}
+
+
+def export_rows(entity: str) -> tuple[list[str], list[tuple]] | None:
+    """(header, rows) for a CSV export, or None for an unknown entity.
+    Raises on DB failure so the caller can return an error instead of an
+    empty file that looks like a valid export."""
+    spec = EXPORTS.get(entity)
+    if spec is None:
+        return None
+    header, sql = spec
+
+    def q(cur):
+        cur.execute(sql)
+        return cur.fetchall()
+
+    return header, _run(q)

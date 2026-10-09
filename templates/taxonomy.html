@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Taxonomy{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div class="trail">Directory · Taxonomy</div>
+  <h1>Canonical EPCM taxonomy</h1>
+  <p>
+    The ten top-level categories drive filtering across the Companies, Jobs
+    and Articles tabs — and are the only categories that make it into the
+    public portal. {{ unassigned }} companies are not yet mapped; use the
+    Companies tab to re-tag them.
+  </p>
+</section>
+
+<div class="tax-tree">
+  {% for node in board %}
+    <div class="tax-node">
+      <h3>
+        <span>{{ node.name }}</span>
+        <span class="n">{{ node.n_companies }} companies</span>
+      </h3>
+      {% if node.children %}
+        <div class="tax-children">
+          {% for c in node.children %}
+            <span class="chip" title="{{ c.slug }}">{{ c.name }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small" style="margin:.3rem 0 0">no sub-categories</p>
+      {% endif %}
+      <p class="small muted" style="margin-top:.5rem">
+        <a href="{{ url_for('companies', cat=node.slug) }}">→ view companies</a>
+      </p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

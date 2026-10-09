@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Companies{% endblock %}
+{% block content_class %}container wide{% endblock %}
 {% block content %}
 
-<section class="panel">
+<section class="section-head">
+  <div class="trail">Directory · Companies</div>
+  <h1>Supplier directory</h1>
+  <p>
+    Every row is a supplier company — merged from LinkedIn SalesNav + Excel
+    master + trade-show scrapers. The enrichment cascade
+    (IcyPeas → FullEnrich → AI Ark → Apollo) fills missing fields.
+  </p>
+</section>
+
+<div class="panel">
   <div class="panel-head">
     <div>
-      <h1>Companies</h1>
-      <p class="muted">
-        Normalised supplier directory (17 columns per row). Categories, event pitch/
-        profile come from the scrape; the other 10 fields are filled by the
-        enrichment cascade — <b>IcyPeas → FullEnrich → AI Ark → Apollo</b>, then a
-        website subpath probe for News/Jobs.
-      </p>
-      <div class="chips">
-        <a class="chip{{ ' chip-active' if not filter_status }}" href="{{ url_for('companies') }}">All <b>{{ counts.get('total',0) }}</b></a>
-        <a class="chip{{ ' chip-active' if filter_status=='pending' }}" href="{{ url_for('companies', status='pending') }}">Pending <b>{{ counts.get('pending',0) }}</b></a>
-        <a class="chip{{ ' chip-active' if filter_status=='enriched' }}" href="{{ url_for('companies', status='enriched') }}">Enriched <b>{{ counts.get('enriched',0) }}</b></a>
-        <a class="chip{{ ' chip-active' if filter_status=='terminal' }}" href="{{ url_for('companies', status='terminal') }}">Terminal <b>{{ counts.get('terminal',0) }}</b></a>
-      </div>
+      <h3>Filter by canonical category</h3>
+      <p class="muted small">Click a chip to narrow the directory to one taxonomy branch.</p>
     </div>
     <div>
       <form method="post" action="{{ url_for('companies_normalize') }}" style="display:inline">
@@ -27,14 +27,54 @@
       <div id="batch-progress" class="muted small" style="margin-top:.4rem"></div>
     </div>
   </div>
-</section>
+
+  <div class="filter-rail" style="margin-top:.6rem">
+    <a class="chip{{ ' chip-active' if not current_cat }}" href="{{ url_for('companies') }}">
+      all <span class="chip-count">{{ counts.get('total', 0) }}</span>
+    </a>
+    {% for c in cat_chips %}
+      <a class="chip{{ ' chip-active' if c.active }}" href="?cat={{ c.slug }}">
+        {{ c.name }} <span class="chip-count">{{ c.n }}</span>
+      </a>
+    {% endfor %}
+    {% if unassigned_n %}
+      <a class="chip{{ ' chip-active' if current_cat == 'unassigned' }}" href="?cat=unassigned">
+        (unassigned) <span class="chip-count">{{ unassigned_n }}</span>
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="filter-rail" style="margin-top:.4rem">
+    <a class="chip{{ ' chip-active' if not filter_status }}" href="{{ url_for('companies') }}">All <span class="chip-count">{{ counts.get('total',0) }}</span></a>
+    <a class="chip{{ ' chip-active' if filter_status=='pending' }}" href="{{ url_for('companies', status='pending') }}">Pending <span class="chip-count">{{ counts.get('pending',0) }}</span></a>
+    <a class="chip{{ ' chip-active' if filter_status=='enriched' }}" href="{{ url_for('companies', status='enriched') }}">Enriched <span class="chip-count">{{ counts.get('enriched',0) }}</span></a>
+    <a class="chip{{ ' chip-active' if filter_status=='terminal' }}" href="{{ url_for('companies', status='terminal') }}">Terminal <span class="chip-count">{{ counts.get('terminal',0) }}</span></a>
+  </div>
+</div>
 
 {% if not rows %}
   <section class="panel empty">
-    <p>No companies yet. Click <strong>Backfill / normalize</strong> above to load them from the last exhibitor scrape.</p>
+    <p>No companies match the current filters.</p>
   </section>
 {% else %}
 <section class="panel companies-wrap">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem; margin-bottom:.75rem">
+    <div class="muted small">
+      Showing {{ ((page-1) * per_page) + 1 }}–{{ ((page-1) * per_page) + rows|length }} of {{ "{:,}".format(total_rows) }}
+      {% if current_cat %}in <b>{{ current_cat.replace('_', ' ') }}</b>{% endif %}
+      {% if filter_status %}· status <b>{{ filter_status }}</b>{% endif %}
+    </div>
+    <div style="display:flex; gap:.3rem">
+      {% set qargs = 'cat=' ~ (current_cat or '') ~ '&status=' ~ (filter_status or '') %}
+      {% if page > 1 %}
+        <a class="chip" href="?{{ qargs }}&page={{ page - 1 }}">← Prev</a>
+      {% endif %}
+      <span class="chip">page {{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a class="chip" href="?{{ qargs }}&page={{ page + 1 }}">Next →</a>
+      {% endif %}
+    </div>
+  </div>
   <table class="companies">
     <thead>
       <tr>

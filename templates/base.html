@@ -8,15 +8,41 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">hi&#8209;engineer<span class="brand-dot">.</span></div>
-    <nav class="tabs">
-      <a class="tab {{ 'active' if active == 'scraping' }}" href="{{ url_for('scraping_engine') }}">Scraping Engine</a>
-      <a class="tab {{ 'active' if active == 'content' }}" href="{{ url_for('content_engine') }}">Content Engine</a>
-      <a class="tab {{ 'active' if active == 'companies' }}" href="{{ url_for('companies') }}">Companies</a>
-      <a class="tab {{ 'active' if active == 'jobs' }}" href="{{ url_for('jobs') }}">Jobs</a>
-      <a class="tab {{ 'active' if active == 'articles' }}" href="{{ url_for('articles') }}">Articles</a>
-      <a class="tab {{ 'active' if active == 'stats' }}" href="{{ url_for('stats') }}">Stats</a>
-      <a class="tab {{ 'active' if active == 'logs' }}" href="{{ url_for('logs') }}">Logs+Costs</a>
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      hi&#8209;engineer<span class="brand-dot">.</span>
+      <span class="brand-sub">EPCM Guide · Netherlands pilot</span>
+    </a>
+    <nav class="nav-groups" aria-label="Primary">
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <a class="tab {{ 'active' if active == 'dashboard' }}" href="{{ url_for('dashboard') }}" title="Pipeline health at a glance">Dashboard</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Ingest</div>
+        <a class="tab {{ 'active' if active == 'scraping' }}" href="{{ url_for('scraping_engine') }}" title="Trade-show exhibitor scraping">Scraping Engine</a>
+        <a class="tab {{ 'active' if active == 'content' }}" href="{{ url_for('content_engine') }}" title="Industrial media portal scraping">Content Engine</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Directory</div>
+        <a class="tab {{ 'active' if active == 'companies' }}" href="{{ url_for('companies') }}" title="Supplier directory + enrichment">Companies</a>
+        <a class="tab {{ 'active' if active == 'contacts' }}" href="{{ url_for('contacts') }}" title="Role-tagged contacts">Contacts</a>
+        <a class="tab {{ 'active' if active == 'taxonomy' }}" href="{{ url_for('taxonomy_page') }}" title="Canonical EPCM taxonomy">Taxonomy</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Content</div>
+        <a class="tab {{ 'active' if active == 'jobs' }}" href="{{ url_for('jobs') }}" title="Jobs feed with role filtering">Jobs</a>
+        <a class="tab {{ 'active' if active == 'articles' }}" href="{{ url_for('articles') }}" title="News feed with topic tagging">Articles</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Operations</div>
+        <a class="tab {{ 'active' if active == 'export' }}" href="{{ url_for('export_page') }}" title="Airtable + CSV export">Export</a>
+        <a class="tab {{ 'active' if active == 'stats' }}" href="{{ url_for('stats') }}" title="Analytics dashboard">Stats</a>
+        <a class="tab {{ 'active' if active == 'logs' }}" href="{{ url_for('logs') }}" title="Run history + costs">Logs</a>
+      </div>
     </nav>
     {% if current_user %}
       <div class="user-chip">
@@ -28,14 +54,11 @@
     {% endif %}
   </header>
 
-  <main class="container">
+  <main class="{% block content_class %}container{% endblock %}">
     {% if not db_healthy %}
       <div class="flash flash-warn">
         <b>Database temporarily unavailable.</b>
-        Tabs render but scrapes won't persist and Logs+Costs may be empty —
-        likely the Supabase free-tier project is paused. Restore it in the
-        <a href="https://supabase.com/dashboard/project/btjmadsiyvrbrwzwtojz" target="_blank" rel="noopener">Supabase dashboard</a>;
-        the app will pick back up automatically.
+        Tabs render but scrapes won't persist and Logs+Costs may be empty.
       </div>
     {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -52,7 +75,7 @@
   </main>
 
   <footer class="footer">
-    Direct cURL scraping · no Firecrawl · no Apify · data from EPCM Guide (Netherlands)
+    Direct cURL scraping · EPCM Guide (Netherlands pilot) · <a href="{{ url_for('dashboard') }}">overview</a>
   </footer>
 </body>
 </html>

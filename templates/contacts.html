@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Contacts{% endblock %}
+{% block content_class %}container wide{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div class="trail">Directory · Contacts</div>
+  <h1>Supplier contacts</h1>
+  <p>
+    Role-tagged people at supplier companies — from the master Excel import
+    plus manual research. Filter by role to pull a shortlist for outreach;
+    the Jobs tab uses the same role buckets so a role filter is portable.
+  </p>
+</section>
+
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Total contacts</div>
+    <div class="kpi-value">{{ "{:,}".format(counts.total) }}</div>
+    <div class="kpi-sub">across {{ counts.by_role | length }} role buckets</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">With real email</div>
+    <div class="kpi-value kpi-good">{{ counts.with_email }}</div>
+    <div class="kpi-sub">
+      {% set pct = (counts.with_email * 100 // counts.total) if counts.total else 0 %}
+      {{ pct }}% — the rest need enrichment
+      <div class="bar"><span style="width: {{ pct }}%"></span></div>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Current filter</div>
+    <div class="kpi-value" style="font-size:1.1rem">
+      {% if current_role %}
+        {{ current_role.replace('_', ' ') }}
+      {% else %}all roles{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if current_email == '1' %}email required
+      {% elif current_email == '0' %}no email
+      {% else %}any email status{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div>
+      <h3>Filter by role</h3>
+      <p class="muted small">EPCM-priority roles first (Project Engineer MEP/Civil/Structural/Process, PM, Construction Mgr, Architect, HSE, Procurement). Click to filter.</p>
+    </div>
+    <div style="display:flex; gap:.3rem">
+      <a class="chip {{ 'chip-active' if current_email == '1' }}" href="?role={{ current_role or '' }}&email=1">has email</a>
+      <a class="chip {{ 'chip-active' if current_email == '0' }}" href="?role={{ current_role or '' }}&email=0">no email</a>
+      <a class="chip" href="{{ url_for('contacts') }}">clear</a>
+    </div>
+  </div>
+
+  <div class="filter-rail">
+    <a class="chip {{ 'chip-active' if not current_role }}" href="{{ url_for('contacts') }}">
+      all <span class="chip-count">{{ "{:,}".format(counts.total) }}</span>
+    </a>
+    {% for c in role_chips %}
+      <a class="chip {{ 'chip-active' if c.active }}"
+         href="?role={{ c.slug }}{% if current_email %}&email={{ current_email }}{% endif %}">
+        {{ c.label }} <span class="chip-count">{{ c.n }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Showing {{ rows | length }} contacts</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Title</th>
+        <th>Company</th>
+        <th>Role bucket</th>
+        <th>Email</th>
+        <th>LinkedIn</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><b>{{ r.name }}</b></td>
+          <td>{{ r.title or '' }}</td>
+          <td>{{ r.resolved_company_name or r.company_name or '' }}</td>
+          <td>
+            {% if r.role_bucket %}
+              <span class="chip">{{ r.role_bucket.replace('_', ' ') }}</span>
+            {% else %}
+              <span class="muted small">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.email and '@' in r.email %}
+              <a href="mailto:{{ r.email }}">{{ r.email }}</a>
+            {% else %}
+              <span class="muted small">needs enrichment</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.linkedin_url %}
+              <a href="{{ r.linkedin_url }}" target="_blank" rel="noopener">open</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if rows | length == 500 %}
+    <p class="muted small" style="margin-top:.75rem">Showing first 500 — refine filters to narrow.</p>
+  {% endif %}
+</div>
+{% endblock %}

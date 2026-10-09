@@ -215,3 +215,107 @@ svg.spark { vertical-align: middle; margin-left: .6rem; opacity: .9; }
 
 .empty { text-align: center; color: var(--muted); }
 .footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 2rem 1rem; }
+
+/* ================ Cycle-2+ additions: grouped nav, dashboard, KPIs ============ */
+
+/* Topbar brand gains a sub-title + wraps better on narrower screens */
+.brand { display: inline-flex; align-items: baseline; gap: .55rem; text-decoration: none; color: var(--text); }
+.brand-sub { font-weight: 400; font-size: .78rem; color: var(--muted); letter-spacing: .02em; }
+
+/* Grouped nav — each group shows a small heading above the tabs so a newcomer
+   can tell what each section is for at a glance. */
+.nav-groups { display: flex; flex-wrap: wrap; gap: 1.4rem; margin-left: auto; margin-right: 1.5rem; }
+.nav-group { display: flex; flex-direction: column; min-width: 0; }
+.nav-group-label {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--muted); margin: .55rem 0 0; padding: 0 .9rem;
+}
+.nav-group .tab { padding: .15rem .9rem .55rem; border-bottom-width: 2px; }
+
+/* --- Dashboard page ------------------------------------------------------- */
+.hero {
+  background: linear-gradient(135deg, rgba(79,156,249,.14), rgba(43,212,167,.08));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.6rem;
+  margin-bottom: 1.25rem;
+}
+.hero h1 { font-size: 1.65rem; margin-bottom: .5rem; }
+.hero p { max-width: 68ch; margin: 0; color: var(--muted); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; margin-bottom: 1.25rem; }
+.kpi {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+.kpi-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.kpi-value { font-size: 1.8rem; font-weight: 700; margin-top: .25rem; color: var(--text); line-height: 1.1; }
+.kpi-sub { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
+.kpi-good { color: var(--accent-2); }
+.kpi-warn { color: var(--warn); }
+.kpi-bad  { color: var(--error); }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+.card h3 { margin: 0 0 .5rem; font-size: .95rem; }
+
+/* Chip = inline-block label (used for taxonomy categories, role buckets) */
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .18rem .55rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: .78rem; color: var(--muted);
+}
+.chip-count { font-weight: 700; color: var(--text); }
+.chip.chip-active { background: var(--accent); color: #06223f; border-color: var(--accent); }
+.chip.chip-active .chip-count { color: #06223f; }
+
+/* Mini horizontal bar inside a card for % values */
+.bar { height: 6px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: .25rem; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+/* Section strip (used on each tab to show "where am I" + a one-sentence
+   description, so a newcomer can scan every page). */
+.section-head { margin-bottom: 1rem; }
+.section-head h1 { font-size: 1.3rem; margin-bottom: .3rem; }
+.section-head .trail { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.section-head p { margin: .25rem 0 0; color: var(--muted); max-width: 76ch; }
+
+/* Filter rail (used on Contacts, Companies) */
+.filter-rail { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.filter-rail .chip { cursor: pointer; }
+.filter-rail .chip:hover { border-color: var(--accent); color: var(--text); }
+
+/* Big-container width — the old 1080 cap is too tight for Companies/Contacts */
+.container.wide { max-width: 1400px; }
+
+/* Table enhancements */
+table.data-table { width: 100%; border-collapse: collapse; }
+table.data-table th, table.data-table td {
+  padding: .55rem .75rem; border-bottom: 1px solid var(--line);
+  text-align: left; font-size: .88rem; vertical-align: top;
+}
+table.data-table th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+table.data-table tr:hover { background: rgba(255,255,255,.015); }
+table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Taxonomy tree */
+.tax-tree { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .8rem; }
+.tax-node {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: .85rem 1rem;
+}
+.tax-node h3 { font-size: .95rem; margin: 0 0 .4rem; display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+.tax-node h3 .n { color: var(--muted); font-size: .78rem; font-weight: 600; }
+.tax-children { display: flex; flex-wrap: wrap; gap: .3rem; }

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Export{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div class="trail">Operations · Export</div>
+  <h1>Export to Airtable, Softr, CSV</h1>
+  <p>
+    Pull live data out of Hi-Engineer for downstream use. The CSV downloads
+    stream the current state of each entity. The Airtable schema is a JSON
+    file you paste into Airtable's "Create base from JSON" flow (or feed to
+    Softr, which sits on Airtable).
+  </p>
+</section>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>CSV downloads</h3>
+    <p class="muted small">UTF-8 CSV, one row per record. Opens cleanly in Excel/Numbers.</p>
+    <ul style="list-style:none; padding:0; margin:.6rem 0; display:flex; flex-direction:column; gap:.4rem">
+      <li><a class="btn btn-small" href="{{ url_for('export_csv', entity='companies') }}">Companies.csv</a></li>
+      <li><a class="btn btn-small" href="{{ url_for('export_csv', entity='contacts') }}">Contacts.csv</a></li>
+      <li><a class="btn btn-small" href="{{ url_for('export_csv', entity='jobs') }}">Jobs.csv</a></li>
+      <li><a class="btn btn-small" href="{{ url_for('export_csv', entity='articles') }}">Articles.csv</a></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Airtable base schema</h3>
+    <p class="muted small">
+      Includes Companies · Contacts · Jobs · Articles tables with their
+      Airtable field types (singleSelect, email, url, etc.) pre-defined.
+    </p>
+    <p style="margin-top:.6rem">
+      <a class="btn btn-small" href="{{ url_for('export_airtable_schema') }}">airtable_schema.json</a>
+    </p>
+  </div>
+  <div class="card">
+    <h3>Softr / portal integration</h3>
+    <p class="muted small">
+      Softr reads Airtable directly. Create an Airtable base from the schema
+      above, then sync CSVs via Airtable's import. For the public portal,
+      Softr's prebuilt list / detail / filter components match the schema.
+    </p>
+  </div>
+</div>
+{% endblock %}

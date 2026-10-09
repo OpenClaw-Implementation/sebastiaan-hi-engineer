@@ -6,9 +6,27 @@ After completing any task:
 2. Update ../CONTEXT.md with current status
 3. Log a summary in ../tasks/ as YYYY-MM-DD-description.md
 
+## Mission
+Hi-Engineer is the **ingest + enrichment + export pipeline** feeding the public
+EPCM Guide (`epcmguide.com`) directory. The pilot scope is the Netherlands.
+Data flows: trade-show scrapers + Excel import → companies + contacts →
+canonical taxonomy + role classification → Jobs + News with role/topic filters
+→ CSV / Airtable / Softr export.
+
 ## Architecture
-Flask web app (Python 3.12, gunicorn) deployed on Heroku. Two tabs, both scrape
-with **direct cURL-style `requests`** — no Firecrawl, no Apify.
+Flask web app (Python 3.12, gunicorn) deployed on Heroku. Scrapers use
+**direct cURL-style `requests`** (plus Firecrawl for 9 JS-rendered trade-show
+sources).
+
+Nav is organised into 5 groups (`templates/base.html`):
+
+| Group | Tabs | Purpose |
+|-------|------|---------|
+| Overview | Dashboard | KPI tiles · taxonomy board · quick links |
+| Ingest | Scraping Engine · Content Engine | Trade-show + media portal scrapers |
+| Directory | Companies · Contacts · Taxonomy | Supplier + role-tagged people + canonical tree |
+| Content | Jobs · Articles | Scraped items with role/topic filter chips |
+| Operations | Export · Stats · Logs | CSV/Airtable export + analytics + run history |
 
 - `app.py` — routes + cache helpers delegating to `db`.
   - `/scraping-engine` (+ `/scrape`, `/enrich`), `/content-engine` (+ `/scrape`),
@@ -79,6 +97,33 @@ with **direct cURL-style `requests`** — no Firecrawl, no Apify.
   (return safe defaults, flip a health flag; the base template shows a "DB
   unavailable" banner). Falls back to JSON files when `DATABASE_URL` is unset
   (local dev).
+- `taxonomy_terms(id, name, slug, parent_id, sort_order)` — canonical EPCM
+  taxonomy (10 top-level + sub-categories from the master Excel `topics` sheet).
+  `companies.category_canonical` / `subcategory_canonical` point into it. Seed
+  via `python taxonomy.py` (idempotent). `taxonomy.map_to_canonical(free_text)`
+  maps free-form Excel categories to canonical slugs at import time.
+- `contacts(id, company_id, company_name, name, title, email, employees_bucket,
+  linkedin_url, linkedin_sales_url, role_bucket, role_sub, source, notes)` —
+  supplier-side people, imported from the Excel Contacts + role-specific sheets
+  and later augmented via Apollo/Clay (future). `role_bucket` mirrors
+  `scrapers.role_classifier`.
+- `jobs.role_bucket` / `articles.topic_tag` + `articles.relevance` — classifier
+  tags written at scrape time (new rows) and backfilled by one-off scripts.
+- `taxonomy.py` — canonical TAXONOMY literal + `seed()` + `map_to_canonical()`.
+- `scrapers/role_classifier.py` — regex rules mapping job titles → EPCM role
+  bucket (project_engineer_mep / civil / structural / process / automation /
+  pm / construction_manager / architect / hse_safety / procurement / etc.).
+  `ROLE_LABELS` gives human-readable labels for the UI; `EPCM_PRIORITY_ROLES`
+  defines filter-chip ordering.
+- `scrapers/topic_classifier.py` — regex rules mapping article titles →
+  topic tag (product_launch / partnership_ma / trade_show / award /
+  sustainability / innovation_rd / facility_expansion / personnel / financial /
+  customer_case / interview_opinion / webinar_training / regulation_policy /
+  blog_update / nav_residue).
+- `import_excel.py` — one-off CLI that imports every sheet of
+  `EPCM Guide_Netherlands.xlsx` into the DB. Idempotent (name-based upsert on
+  Companies, LinkedIn-URL dedupe on Contacts). Scraper-side fields
+  (`news_url`, `jobs_url`) are protected via `coalesce(existing, excluded)`.
 - `scrapers/sources.py` — source URLs derived from `EPCM Guide_Netherlands.xlsx`:
   - `EVENT_SOURCES` = Companies sheet · "EVENT SOURCE" (all 112 rows are one unique
     URL: the Food Tech Event exhibitor list). Deduped + capped at 50.
