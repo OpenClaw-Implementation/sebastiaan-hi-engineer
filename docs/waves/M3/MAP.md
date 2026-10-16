@@ -8,7 +8,9 @@ Softr app — 5 pilot companies first, then hundreds. Done-when lines: `PLAN.md`
 ## Notes (state on 2026-10-16)
 - Database (Heroku Postgres): 3,066 companies (1,876 from the master Excel), 791 contacts (14 with email),
   930 job links (455 real vacancies), 2,328 news links. 93% of companies have a canonical category.
-- **The Bizzy supplier list (email 10-09) is not on the VPS and not imported** — no `bizzy` source in the database.
+- The Bizzy list: the 10-15 file (Industrial_Engineering_NL_BB_19972, a Bizzy export of 1,717 companies, no
+  persons) is fully covered — every company is already in the directory via the master Excel import. Confirm
+  whether the 10-09 attachment is the same file.
 - **No enrichment or pipeline run is recorded after 2026-07-16**, although the client approved the cheaper option
   on 10-09 and Cristian replied "Running it now". The only processing after that date was the AI classification
   script, which writes no run log.
@@ -28,7 +30,8 @@ Softr app — 5 pilot companies first, then hundreds. Done-when lines: `PLAN.md`
 ## Open requests from the client
 - 2026-10-09: add the Bizzy supplier list and enlarge it with contacts.
 - 2026-10-15: "Are the contacts found from attached Industrial_Engineering_NL_BB_19972 also in contacts.csv?" —
-  answered in its own ticket, not here.
+  checked 2026-10-16: file has no persons; 16 of its 1,717 companies have people in contacts.csv. Reply drafted;
+  contact enrichment for the other 1,701 offered as a follow-on.
 
 ## Not yet specified
 1. **Dedup key across sources.** Recommended: normalised domain first, then normalised company name
