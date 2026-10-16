@@ -1,0 +1,31 @@
+# Glossary
+
+- **EPCM** — Engineering, Procurement, Construction Management: the project model the directory serves.
+- **EPCM Guide / epcmguide.com** — the client's name for the public supplier guide (emails Aug–Sep 2026).
+- **Hi-Engineer / hi-engineer.nl** — this project and the client's planned Dutch platform name (email 2026-06-19).
+- **Supplier** — a company selling products or services into EPCM projects; one row in `companies`.
+- **Manufacturer / plant data** — companies that own plants (the buyers); gathered by the client by hand for now.
+- **Contact (person)** — a person at a supplier; one row in `contacts`.
+- **contacts.csv** — the Contacts export from the Export page (`/export/contacts.csv`).
+- **Master file / master Excel** — the client's `EPCM Guide_Netherlands.xlsx` (Companies, Contacts, role sheets, topics, Sources); imported with `import_excel.py`.
+- **Master sheet** — the planned single Google Sheet merging the database and the client's files, the source for Softr.
+- **Softr** — no-code platform the client chose for the public portal (replaces Airtable).
+- **Airtable** — earlier candidate for the portal database; dropped on 2026-10-09.
+- **Bizzy** — Belgian lead-generation tool (app.bizzy.ai) the client bought a Dutch supplier list from.
+- **Sales Navigator / Evaboot** — LinkedIn tools the client uses to export company and people lists.
+- **Source** — a URL the scrapers read, usually a trade-show exhibitor list (`event_sources`).
+- **Parser** — code that reads one kind of source page (`foodtech`, `easyfairs`, `firecrawl`, `unsupported`).
+- **Media portal** — industry website with a supplier directory (Content Engine's 9 sources).
+- **Enrichment** — filling missing company or contact fields from external providers.
+- **Cascade / leg** — providers tried one after another, cheapest first; each provider is a leg.
+- **Pending / enriched / terminal** — not yet enriched / at least one provider found data / every provider found nothing.
+- **Site probe** — free check of a company website for /news and /jobs pages.
+- **Taxonomy / canonical category** — the 11-category tree (from the Excel `topics` sheet) the portal uses.
+- **Role bucket** — job family of a contact or vacancy (e.g. Project Engineer — MEP); `not_a_job` marks menu links.
+- **Topic tag** — kind of news item (product launch, trade show…); `nav_residue` marks "read more" links and dates.
+- **AI classification** — `ai_classify.py` filling empty category, specialities, role and topic with Claude.
+- **Run** — one execution of a scrape/enrich/pipeline job, logged step by step on the Logs page.
+- **Credit** — the unit an integration bills in.
+- **PIT** — our tracker: messages, meetings, tickets, people.
+- **Granola** — the meeting recorder whose summaries feed PIT.
+- **KvK** — Dutch Chamber of Commerce register (API planned in the original proposal, not built).
