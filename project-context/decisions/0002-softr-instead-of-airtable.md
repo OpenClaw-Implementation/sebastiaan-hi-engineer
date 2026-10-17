@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0002 — Softr for the portal; Airtable dropped
 Status: accepted
 Source: meeting 2026-10-09 (earlier options: emails 2026-08-30 / 09-24 named "Airtable or Softr").

@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0006 — The client's master Excel is imported as a source of truth
 Status: accepted
 Source: decision in the Claude session 2026-10-08 (operator choice); client emails 2026-06-19 and 2026-08-30 with the workbook.

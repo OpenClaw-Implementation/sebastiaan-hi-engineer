@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/sources/YYYY-MM-DD-<meeting|messages>-<slug>.md -->
 # 2026-10-09 · "Seb <> Pogan" · Cristian + Sebastiaan (36 min) — latest direction
 Source: Granola summary in PIT (full transcript held in PIT; action extraction not run).
 

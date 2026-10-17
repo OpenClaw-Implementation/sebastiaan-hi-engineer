@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/sources/YYYY-MM-DD-<meeting|messages>-<slug>.md -->
 # 2026-05-19 · "Linkedin follow up Hi Engineer" · Cristian + Sebastiaan (59 min)
 Source: Granola summary in PIT.
 

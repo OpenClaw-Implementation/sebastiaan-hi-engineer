@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/sources/YYYY-MM-DD-<meeting|messages>-<slug>.md -->
 # Email and WhatsApp history, 2026-05 → 2026-10-15
 Source: operator digest in PIT of 94 filed + 7 unfiled messages. Scheduling, money, addresses and private details left out.
 

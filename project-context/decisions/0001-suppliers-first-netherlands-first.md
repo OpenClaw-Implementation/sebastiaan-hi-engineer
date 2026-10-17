@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0001 — Suppliers first, Netherlands first
 Status: accepted
 Source: email 2026-06-19 ("First focus next months in 2026 is on the data gathering and Dutch suppliers"); emails 2026-08-30 and 2026-09-24; meeting 2026-10-09.

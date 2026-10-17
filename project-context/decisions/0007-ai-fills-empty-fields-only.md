@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0007 — AI classification fills empty fields only, and logs every write
 Status: accepted
 Source: task 2026-10-09 (AI classification run).

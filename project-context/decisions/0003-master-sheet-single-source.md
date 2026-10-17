@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0003 — A master Google Sheet is the single source before Softr
 Status: accepted
 Source: meeting 2026-10-09; client email 2026-10-09 ("make 1 masterfile Excel/google sheets and start uploading in softr").

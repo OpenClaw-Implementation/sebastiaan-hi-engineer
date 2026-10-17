@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0004 — Apollo as a fallback only
 Status: accepted
 Source: meeting 2026-10-09; enrichment cost guide sent 2026-10-09 (measured hit rates); client approval of the cheaper enrichment option on WhatsApp 2026-10-09.

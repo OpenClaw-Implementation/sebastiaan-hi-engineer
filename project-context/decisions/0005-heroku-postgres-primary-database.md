@@ -1,3 +1,4 @@
+<!-- template: pogan-context v2 · project-context/decisions/NNNN-title.md -->
 # 0005 — Heroku Postgres is the app's database; Supabase is a backup
 Status: accepted
 Source: task log 2026-06-24 (cutover after repeated Supabase free-tier auto-pauses); backup task 2026-10-09.
