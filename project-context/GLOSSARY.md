@@ -48,3 +48,8 @@
 - **Needs a person** — something only a human can fix (an interactive login, 2FA, OAuth consent, a key to rotate).
   Listed in `HEALTH.md` with the exact fix.
 - **Gate** — what a service is needed for: deploy, verify, run (the product needs it) or task (some tasks need it).
+- **Production** — where the product runs and what a deploy changes: the server, device or hosting account, its
+  database and the pipeline that ships to it (named at the top of `HEALTH.md`).
+- **App** — what the client uses: the live URL, the bot, the dashboard (named at the top of `HEALTH.md`).
+- **Check level** — how much a health check counts: required (a failure blocks), optional (a failure is a gap) or,
+  set by a person in PIT, known gap (failing on purpose, not counted).

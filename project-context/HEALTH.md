@@ -7,6 +7,9 @@ PIT runs a **health check** on this project every week and on demand. It is a ti
 PIT judges them (exit code 0 and the expected text) and shows the project as **can deploy** / **can verify** /
 **needs a person**. Terms: `GLOSSARY.md` → Pogan terms.
 
+**Production:** Heroku app `hi-engineer-app` (Basic web dyno, gunicorn) with its Heroku Postgres essential-0 add-on, shipped by `git push heroku main` from this VPS.
+**App:** the password-protected Hi-Engineer dashboard at https://hi-engineer-app-42963ff5fb67.herokuapp.com/ (directory, contacts, taxonomy, jobs, articles, CSV/Airtable export).
+
 ## Services
 | Service | Used for | Gate | Account | Access held by |
 |---|---|---|---|---|
@@ -30,37 +33,37 @@ PIT judges them (exit code 0 and the expected text) and shows the project as **c
 ## Checks
 
 ### Can deploy
-name | exact command | expected output
---- | --- | ---
-heroku-app-access | `heroku apps:info -a hi-engineer-app` | Web URL:
-heroku-push | `git push --dry-run heroku main && echo PUSH_OK` | PUSH_OK
+name | exact command | expected output | level
+--- | --- | --- | ---
+heroku-app-access | `heroku apps:info -a hi-engineer-app` | Web URL: | required
+heroku-push | `git push --dry-run heroku main && echo PUSH_OK` | PUSH_OK | required
 
 ### Can verify
-name | exact command | expected output
---- | --- | ---
-app-secret-readable | `heroku config:get SECRET_KEY -a hi-engineer-app \| grep -q . && echo SECRET_KEY_READABLE` | SECRET_KEY_READABLE
-python-compile | `python3 -m py_compile app.py db.py ai_classify.py import_excel.py taxonomy.py && echo COMPILED` | COMPILED
-python-deps | `python3 -c "import playwright, flask, psycopg2, jinja2; print('PYDEPS_OK')"` | PYDEPS_OK
+name | exact command | expected output | level
+--- | --- | --- | ---
+app-secret-readable | `heroku config:get SECRET_KEY -a hi-engineer-app \| grep -q . && echo SECRET_KEY_READABLE` | SECRET_KEY_READABLE | required
+python-compile | `python3 -m py_compile app.py db.py ai_classify.py import_excel.py taxonomy.py && echo COMPILED` | COMPILED | required
+python-deps | `python3 -c "import playwright, flask, psycopg2, jinja2; print('PYDEPS_OK')"` | PYDEPS_OK | required
 
 ### Services the product needs
-name | exact command | expected output
---- | --- | ---
-postgres | `heroku pg:info -a hi-engineer-app` | Available
-scheduler-addon | `heroku addons -a hi-engineer-app` | scheduler
-icypeas-key | `heroku config:get ICYPEAS_API_KEY -a hi-engineer-app \| grep -q . && echo ICYPEAS_KEY_SET` | ICYPEAS_KEY_SET
-apollo-key | `curl -s -H "X-Api-Key: $(heroku config:get APOLLO_API_KEY -a hi-engineer-app)" https://api.apollo.io/v1/auth/health` | "is_logged_in":true
-firecrawl-key | `curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $(heroku config:get FIRECRAWL_API_KEY -a hi-engineer-app)" https://api.firecrawl.dev/v1/team/credit-usage` | 200
+name | exact command | expected output | level
+--- | --- | --- | ---
+postgres | `heroku pg:info -a hi-engineer-app` | Available | required
+scheduler-addon | `heroku addons -a hi-engineer-app` | scheduler | optional
+icypeas-key | `heroku config:get ICYPEAS_API_KEY -a hi-engineer-app \| grep -q . && echo ICYPEAS_KEY_SET` | ICYPEAS_KEY_SET | optional
+apollo-key | `curl -s -H "X-Api-Key: $(heroku config:get APOLLO_API_KEY -a hi-engineer-app)" https://api.apollo.io/v1/auth/health` | "is_logged_in":true | optional
+firecrawl-key | `curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $(heroku config:get FIRECRAWL_API_KEY -a hi-engineer-app)" https://api.firecrawl.dev/v1/team/credit-usage` | 200 | optional
 
 IcyPeas has no free "who am I" call we use, so `icypeas-key` only proves the key is configured.
 
 ### Services some tasks need
-name | exact command | expected output
---- | --- | ---
-fullenrich-key | `curl -s -H "Authorization: Bearer $(heroku config:get FULLENRICH_API_KEY -a hi-engineer-app)" https://app.fullenrich.com/api/v1/account/credits` | "balance"
-ai-ark-key | `heroku config:get AI_ARK_API_KEY -a hi-engineer-app \| grep -q . && echo AI_ARK_KEY_SET` | AI_ARK_KEY_SET
-claude-cli | `claude --version` | Claude Code
-github-push | `git push --dry-run github main && echo PUSH_OK` | PUSH_OK
-supabase-backup | `curl -s -o /dev/null -w "%{http_code}" https://btjmadsiyvrbrwzwtojz.supabase.co/rest/v1/` | 401
+name | exact command | expected output | level
+--- | --- | --- | ---
+fullenrich-key | `curl -s -H "Authorization: Bearer $(heroku config:get FULLENRICH_API_KEY -a hi-engineer-app)" https://app.fullenrich.com/api/v1/account/credits` | "balance" | optional
+ai-ark-key | `heroku config:get AI_ARK_API_KEY -a hi-engineer-app \| grep -q . && echo AI_ARK_KEY_SET` | AI_ARK_KEY_SET | optional
+claude-cli | `claude --version` | Claude Code | optional
+github-push | `git push --dry-run github main && echo PUSH_OK` | PUSH_OK | optional
+supabase-backup | `curl -s -o /dev/null -w "%{http_code}" https://btjmadsiyvrbrwzwtojz.supabase.co/rest/v1/` | 401 | optional
 
 ## Needs a person
 | What | When it is needed | Fix |
