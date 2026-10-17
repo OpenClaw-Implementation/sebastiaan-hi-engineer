@@ -1,7 +1,7 @@
 <!-- template: pogan-context v2 · project-context/FRAMEWORK.md -->
 # Framework — run, test, ship
 
-All commands run from the repo root on the VPS (this checkout: `/home/dregemva/scratch-ctx-test2/hi-engineer/repo`,
+All commands run from the repo root on the VPS (this checkout: `/home/dregemva/clients/sebastiaan/hi-engineer/repo`,
 host `TMUX`). Services and logins these commands need: `HEALTH.md`.
 
 ## Run

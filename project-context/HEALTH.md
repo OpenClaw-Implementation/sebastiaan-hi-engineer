@@ -3,7 +3,7 @@
 
 PIT runs a **health check** on this project every week and on demand. It is a ticket titled
 `Health check · Hi-Engineer`: a session runs every check below exactly as written, from the repo root
-(`/home/dregemva/scratch-ctx-test2/hi-engineer/repo`) on the VPS, changes nothing, and reports the results to PIT.
+(`/home/dregemva/clients/sebastiaan/hi-engineer/repo`) on the VPS, changes nothing, and reports the results to PIT.
 PIT judges them (exit code 0 and the expected text) and shows the project as **can deploy** / **can verify** /
 **needs a person**. Terms: `GLOSSARY.md` → Pogan terms.
 
